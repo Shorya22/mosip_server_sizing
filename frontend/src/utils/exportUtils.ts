@@ -1,7 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
-import type { CombinedOutput, RegistrationOutput, AuthenticationOutput } from '../types';
+import type { CombinedOutput } from '../types';
 
 // Extend jsPDF type for autoTable
 declare module 'jspdf' {
@@ -15,12 +15,32 @@ const formatDate = () => new Date().toLocaleDateString('en-US', {
   year: 'numeric',
   month: 'long',
   day: 'numeric',
+});
+const formatDateTime = () => new Date().toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
   hour: '2-digit',
   minute: '2-digit',
 });
 
 // =============================================================================
-// PDF EXPORT
+// COLOR SCHEME
+// =============================================================================
+const COLORS = {
+  primary: [13, 71, 161] as [number, number, number],
+  secondary: [55, 71, 79] as [number, number, number],
+  accent: [0, 137, 123] as [number, number, number],
+  success: [46, 125, 50] as [number, number, number],
+  warning: [245, 124, 0] as [number, number, number],
+  light: [236, 239, 241] as [number, number, number],
+  white: [255, 255, 255] as [number, number, number],
+  text: [33, 33, 33] as [number, number, number],
+  textLight: [117, 117, 117] as [number, number, number],
+};
+
+// =============================================================================
+// PDF EXPORT - PROFESSIONAL REPORT
 // =============================================================================
 
 export function exportToPDF(
@@ -35,98 +55,136 @@ export function exportToPDF(
 
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
-  let yPos = 20;
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 15;
+  const contentWidth = pageWidth - (margin * 2);
 
-  // Colors
-  const primaryColor: [number, number, number] = [30, 64, 175];
-  const secondaryColor: [number, number, number] = [100, 116, 139];
-  const successColor: [number, number, number] = [5, 150, 105];
+  // =========================================================================
+  // PAGE 1: COVER PAGE
+  // =========================================================================
 
-  // Header
-  doc.setFillColor(...primaryColor);
-  doc.rect(0, 0, pageWidth, 40, 'F');
+  // Blue header
+  doc.setFillColor(...COLORS.primary);
+  doc.rect(0, 0, pageWidth, 60, 'F');
 
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(22);
-  doc.setFont('helvetica', 'bold');
-  doc.text('MOSIP Resource Calculator', 14, 18);
-
+  // MOSIP Logo
+  doc.setFillColor(...COLORS.white);
+  doc.roundedRect(margin, 15, 50, 20, 3, 3, 'F');
+  doc.setTextColor(...COLORS.primary);
   doc.setFontSize(12);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Server Sizing Report', 14, 28);
-
-  doc.setFontSize(10);
-  doc.text(`Module: ${moduleName}`, pageWidth - 14, 18, { align: 'right' });
-  doc.text(`Generated: ${formatDate()}`, pageWidth - 14, 28, { align: 'right' });
-
-  yPos = 50;
-
-  // Executive Summary Section
-  doc.setTextColor(...primaryColor);
-  doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
-  doc.text('Executive Summary', 14, yPos);
+  doc.text('MOSIP', margin + 25, 28, { align: 'center' });
 
-  yPos += 10;
+  // Report Type Badge
+  doc.setFillColor(...COLORS.accent);
+  doc.roundedRect(pageWidth - margin - 60, 15, 60, 20, 3, 3, 'F');
+  doc.setTextColor(...COLORS.white);
+  doc.setFontSize(8);
+  doc.text('SERVER SIZING', pageWidth - margin - 30, 24, { align: 'center' });
+  doc.text('REPORT', pageWidth - margin - 30, 31, { align: 'center' });
 
-  // Summary boxes
-  const summaryData = [
-    ['Total vCPU', formatNumber(moduleData.total_vcpu)],
-    ['Total RAM (GB)', formatNumber(moduleData.total_ram)],
-    ['Total Pods', formatNumber(moduleData.total_pods)],
+  // Main Title
+  doc.setTextColor(...COLORS.primary);
+  doc.setFontSize(24);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Infrastructure Resource Report', pageWidth / 2, 85, { align: 'center' });
+
+  // Module Name
+  doc.setFillColor(...COLORS.primary);
+  doc.roundedRect(pageWidth/2 - 55, 95, 110, 14, 3, 3, 'F');
+  doc.setTextColor(...COLORS.white);
+  doc.setFontSize(10);
+  doc.text(moduleName, pageWidth / 2, 104, { align: 'center' });
+
+  // Summary Section
+  doc.setFillColor(...COLORS.light);
+  doc.roundedRect(margin, 125, contentWidth, 85, 5, 5, 'F');
+
+  doc.setTextColor(...COLORS.secondary);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text('RESOURCE REQUIREMENTS', pageWidth / 2, 140, { align: 'center' });
+
+  // Three main metrics
+  const metricWidth = contentWidth / 3;
+  const metrics = [
+    { label: 'Total vCPU', value: formatNumber(moduleData.total_vcpu), unit: 'cores' },
+    { label: 'Total RAM', value: formatNumber(moduleData.total_ram), unit: 'GB' },
+    { label: 'Total Pods', value: formatNumber(moduleData.total_pods), unit: 'replicas' },
   ];
 
-  if (isRegistration && result.registration_duration_days > 0) {
-    summaryData.push(['Working Days', formatNumber(result.registration_duration_days)]);
-  }
+  metrics.forEach((metric, index) => {
+    const x = margin + (index * metricWidth) + metricWidth / 2;
 
-  autoTable(doc, {
-    startY: yPos,
-    head: [['Metric', 'Value']],
-    body: summaryData,
-    theme: 'grid',
-    headStyles: {
-      fillColor: primaryColor,
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-    },
-    styles: {
-      fontSize: 11,
-      cellPadding: 6,
-    },
-    columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 80 },
-      1: { halign: 'right', cellWidth: 60 },
-    },
-    margin: { left: 14, right: 14 },
+    doc.setTextColor(...COLORS.primary);
+    doc.setFontSize(28);
+    doc.setFont('helvetica', 'bold');
+    doc.text(metric.value, x, 170, { align: 'center' });
+
+    doc.setTextColor(...COLORS.textLight);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(metric.unit, x, 180, { align: 'center' });
+
+    doc.setFontSize(9);
+    doc.text(metric.label, x, 195, { align: 'center' });
   });
 
-  yPos = doc.lastAutoTable.finalY + 15;
+  // Report Info
+  doc.setTextColor(...COLORS.text);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
 
-  // Input Parameters Section
-  doc.setTextColor(...primaryColor);
-  doc.setFontSize(14);
+  const infoStartY = 230;
+  doc.text('Report Generated:', margin + 10, infoStartY);
   doc.setFont('helvetica', 'bold');
-  doc.text('Input Parameters', 14, yPos);
+  doc.text(formatDateTime(), margin + 55, infoStartY);
 
-  yPos += 10;
+  doc.setFont('helvetica', 'normal');
+  doc.text('Platform Version:', margin + 10, infoStartY + 10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('MOSIP 1.3.0', margin + 55, infoStartY + 10);
+
+  doc.setFont('helvetica', 'normal');
+  doc.text('Baseline TPS:', margin + 10, infoStartY + 20);
+  doc.setFont('helvetica', 'bold');
+  doc.text(moduleData.baseline_tps.toString(), margin + 55, infoStartY + 20);
+
+  // Footer notice
+  doc.setFillColor(...COLORS.warning);
+  doc.roundedRect(margin, pageHeight - 45, contentWidth, 18, 2, 2, 'F');
+  doc.setTextColor(...COLORS.white);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('CONFIDENTIAL - FOR INTERNAL USE ONLY', pageWidth / 2, pageHeight - 35, { align: 'center' });
+
+  // =========================================================================
+  // PAGE 2: CONFIGURATION & PERFORMANCE
+  // =========================================================================
+  doc.addPage();
+  let yPos = 20;
+
+  drawPageHeader(doc, 'Configuration & Performance', pageWidth);
+  yPos = 50;
+
+  // Input Configuration Section
+  drawSectionHeader(doc, 'Input Configuration', margin, yPos);
+  yPos += 15;
 
   let inputData: string[][];
   if (isRegistration) {
-    const regData = result.registration;
     inputData = [
-      ['Total Population', formatNumber(regData.inputs.total_population)],
-      ['Registration Devices', formatNumber(regData.inputs.num_registration_devices)],
-      ['Registrations/Device/Day', formatNumber(regData.inputs.registrations_per_device_per_day)],
-      ['Upload Window', `${regData.inputs.upload_window_hours} hours`],
-      ['Peak Day Multiplier', `${regData.inputs.peak_day_multiplier}x`],
+      ['Total Population', formatNumber(result.registration.inputs.total_population)],
+      ['Registration Devices', formatNumber(result.registration.inputs.num_registration_devices)],
+      ['Registrations/Device/Day', formatNumber(result.registration.inputs.registrations_per_device_per_day)],
+      ['Upload Window', `${result.registration.inputs.upload_window_hours} hour(s)`],
+      ['Peak Day Multiplier', `${result.registration.inputs.peak_day_multiplier}x`],
     ];
   } else {
-    const authData = result.authentication;
     inputData = [
-      ['Total Population', formatNumber(authData.inputs.total_population)],
-      ['Daily Auth Rate', `${(authData.inputs.avg_auth_percentage * 100).toFixed(1)}%`],
-      ['Peak Hour Rate', `${(authData.inputs.peak_hour_percentage * 100).toFixed(1)}%`],
+      ['Total Population', formatNumber(result.authentication.inputs.total_population)],
+      ['Daily Auth Rate', `${(result.authentication.inputs.avg_auth_percentage * 100).toFixed(1)}%`],
+      ['Peak Hour Rate', `${(result.authentication.inputs.peak_hour_percentage * 100).toFixed(1)}%`],
     ];
   }
 
@@ -134,193 +192,367 @@ export function exportToPDF(
     startY: yPos,
     head: [['Parameter', 'Value']],
     body: inputData,
-    theme: 'striped',
+    theme: 'plain',
     headStyles: {
-      fillColor: secondaryColor,
-      textColor: [255, 255, 255],
+      fillColor: COLORS.secondary,
+      textColor: COLORS.white,
+      fontStyle: 'bold',
+      fontSize: 10,
     },
-    styles: { fontSize: 10, cellPadding: 5 },
-    margin: { left: 14, right: 14 },
+    bodyStyles: { fontSize: 10 },
+    alternateRowStyles: { fillColor: COLORS.light },
+    styles: { cellPadding: 6 },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 80 },
+      1: { halign: 'right', cellWidth: 60 },
+    },
+    tableWidth: 150,
+    margin: { left: margin },
   });
 
-  yPos = doc.lastAutoTable.finalY + 15;
+  yPos = doc.lastAutoTable.finalY + 20;
 
   // Performance Metrics Section
-  doc.setTextColor(...primaryColor);
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Performance Metrics', 14, yPos);
+  drawSectionHeader(doc, 'Performance Metrics', margin, yPos);
+  yPos += 15;
 
-  yPos += 10;
-
-  const perfData = isRegistration
-    ? [
-        ['Daily Registrations', formatNumber(result.registration.daily_registrations)],
-        ['Peak Daily Upload', formatNumber(result.registration.peak_daily_upload)],
-        ['Peak TPS', moduleData.peak_tps.toFixed(2)],
-        ['Scale Factor', `${moduleData.scale_factor.toFixed(2)}x`],
-        ['Baseline TPS', moduleData.baseline_tps.toString()],
-      ]
-    : [
-        ['Daily Authentications', formatNumber(result.authentication.daily_authentications)],
-        ['Peak Hour Auth', formatNumber(result.authentication.peak_hour_authentications)],
-        ['Peak TPS', moduleData.peak_tps.toFixed(2)],
-        ['Scale Factor', `${moduleData.scale_factor.toFixed(2)}x`],
-        ['Baseline TPS', moduleData.baseline_tps.toString()],
-      ];
+  const perfData = isRegistration ? [
+    ['Daily Registrations', formatNumber(result.registration.daily_registrations)],
+    ['Peak Daily Upload', formatNumber(result.registration.peak_daily_upload)],
+    ['Peak TPS', `${moduleData.peak_tps} transactions/sec`],
+    ['Scale Factor', `${moduleData.scale_factor}x`],
+    ['Completion Time', `${result.registration_duration_days} working days`],
+  ] : [
+    ['Daily Authentications', formatNumber(result.authentication.daily_authentications)],
+    ['Peak Hour Volume', formatNumber(result.authentication.peak_hour_authentications)],
+    ['Peak TPS', `${moduleData.peak_tps} transactions/sec`],
+    ['Scale Factor', `${moduleData.scale_factor}x`],
+  ];
 
   autoTable(doc, {
     startY: yPos,
     head: [['Metric', 'Value']],
     body: perfData,
-    theme: 'striped',
+    theme: 'plain',
     headStyles: {
-      fillColor: successColor,
-      textColor: [255, 255, 255],
+      fillColor: COLORS.accent,
+      textColor: COLORS.white,
+      fontStyle: 'bold',
+      fontSize: 10,
     },
-    styles: { fontSize: 10, cellPadding: 5 },
-    margin: { left: 14, right: 14 },
+    bodyStyles: { fontSize: 10 },
+    alternateRowStyles: { fillColor: COLORS.light },
+    styles: { cellPadding: 6 },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 80 },
+      1: { halign: 'right', cellWidth: 60 },
+    },
+    tableWidth: 150,
+    margin: { left: margin },
   });
 
-  // New page for services table
+  yPos = doc.lastAutoTable.finalY + 20;
+
+  // Resource Summary Box
+  doc.setFillColor(...COLORS.success);
+  doc.roundedRect(margin, yPos, contentWidth, 40, 3, 3, 'F');
+
+  doc.setTextColor(...COLORS.white);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('TOTAL RESOURCES REQUIRED', pageWidth / 2, yPos + 12, { align: 'center' });
+
+  const resourceMetrics = [
+    { label: 'vCPU', value: formatNumber(moduleData.total_vcpu) },
+    { label: 'RAM (GB)', value: formatNumber(moduleData.total_ram) },
+    { label: 'Pods', value: formatNumber(moduleData.total_pods) },
+  ];
+
+  const resMetricWidth = contentWidth / 3;
+  resourceMetrics.forEach((metric, index) => {
+    const x = margin + (index * resMetricWidth) + resMetricWidth / 2;
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(metric.value, x, yPos + 28, { align: 'center' });
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(metric.label, x, yPos + 36, { align: 'center' });
+  });
+
+  // =========================================================================
+  // PAGE 3: SERVICE BREAKDOWN
+  // =========================================================================
   doc.addPage();
   yPos = 20;
 
-  // Services Table Section
-  doc.setTextColor(...primaryColor);
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Service-wise Resource Breakdown', 14, yPos);
+  drawPageHeader(doc, 'Service Resource Allocation', pageWidth);
+  yPos = 50;
 
-  yPos += 10;
-
+  // Services Table
   const servicesTableData = moduleData.services.map(s => [
     s.description,
     s.vcpu_per_pod.toString(),
-    `${s.ram_per_pod} GB`,
+    s.ram_per_pod.toString(),
     s.base_pods.toString(),
     s.scaled_pods.toString(),
     s.total_vcpu.toString(),
-    `${s.total_ram} GB`,
+    s.total_ram.toString(),
     s.is_fixed ? 'Fixed' : 'Scalable',
-  ]);
-
-  // Add totals row
-  servicesTableData.push([
-    'TOTAL',
-    '-',
-    '-',
-    '-',
-    moduleData.total_pods.toString(),
-    moduleData.total_vcpu.toString(),
-    `${moduleData.total_ram} GB`,
-    '-',
   ]);
 
   autoTable(doc, {
     startY: yPos,
     head: [['Service', 'vCPU/Pod', 'RAM/Pod', 'Base', 'Scaled', 'Total vCPU', 'Total RAM', 'Type']],
     body: servicesTableData,
-    theme: 'grid',
+    theme: 'striped',
     headStyles: {
-      fillColor: primaryColor,
-      textColor: [255, 255, 255],
+      fillColor: COLORS.primary,
+      textColor: COLORS.white,
       fontStyle: 'bold',
       fontSize: 8,
+      halign: 'center',
     },
-    styles: { fontSize: 8, cellPadding: 3 },
+    bodyStyles: {
+      fontSize: 8,
+      halign: 'center',
+    },
     columnStyles: {
-      0: { cellWidth: 45 },
+      0: { halign: 'left', cellWidth: 45 },
     },
-    margin: { left: 14, right: 14 },
+    styles: { cellPadding: 4 },
+    margin: { left: margin, right: margin },
     didParseCell: (data) => {
-      // Style the last row (totals)
-      if (data.row.index === servicesTableData.length - 1) {
+      if (data.column.index === 7 && data.section === 'body') {
+        const isFixed = data.cell.raw === 'Fixed';
+        data.cell.styles.textColor = isFixed ? COLORS.warning : COLORS.success;
         data.cell.styles.fontStyle = 'bold';
-        data.cell.styles.fillColor = [241, 245, 249];
       }
     },
   });
 
   yPos = doc.lastAutoTable.finalY + 15;
 
-  // Buffer Allocation Section
-  doc.setTextColor(...primaryColor);
-  doc.setFontSize(14);
+  // Service Totals
+  doc.setFillColor(...COLORS.primary);
+  doc.roundedRect(margin, yPos, contentWidth, 20, 2, 2, 'F');
+
+  doc.setTextColor(...COLORS.white);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text('Buffer Allocation', 14, yPos);
+  doc.text('SERVICE TOTALS (Before Buffers)', margin + 10, yPos + 13);
 
-  yPos += 10;
+  doc.setFontSize(9);
+  doc.text(`vCPU: ${moduleData.buffers.base_vcpu}  |  RAM: ${moduleData.buffers.base_ram} GB  |  Pods: ${moduleData.total_pods}`, pageWidth - margin - 10, yPos + 13, { align: 'right' });
 
+  // =========================================================================
+  // PAGE 4: BUFFER ALLOCATION
+  // =========================================================================
+  doc.addPage();
+  yPos = 20;
+
+  drawPageHeader(doc, 'Buffer Allocation', pageWidth);
+  yPos = 50;
+
+  // Buffer Table
   const bufferData = [
-    ['Base Resources', moduleData.buffers.base_vcpu.toString(), `${moduleData.buffers.base_ram} GB`],
-    ['+ Monitoring & Logging (20%)', `+${moduleData.buffers.monitoring_logging_vcpu}`, `+${moduleData.buffers.monitoring_logging_ram} GB`],
-    ['+ Kubernetes Infra (30%)', `+${moduleData.buffers.kubernetes_infra_vcpu}`, `+${moduleData.buffers.kubernetes_infra_ram} GB`],
-    ['+ System Buffer (30%)', `+${moduleData.buffers.system_buffer_vcpu}`, `+${moduleData.buffers.system_buffer_ram} GB`],
-    ['TOTAL', moduleData.total_vcpu.toString(), `${moduleData.total_ram} GB`],
+    ['Base Resources', moduleData.buffers.base_vcpu.toFixed(1), moduleData.buffers.base_ram.toFixed(1), '—'],
+    ['Monitoring & Logging', `+${moduleData.buffers.monitoring_logging_vcpu.toFixed(1)}`, `+${moduleData.buffers.monitoring_logging_ram.toFixed(1)}`, '+20%'],
+    ['Kubernetes Infrastructure', `+${moduleData.buffers.kubernetes_infra_vcpu.toFixed(1)}`, `+${moduleData.buffers.kubernetes_infra_ram.toFixed(1)}`, '+30%'],
+    ['System Buffer', `+${moduleData.buffers.system_buffer_vcpu.toFixed(1)}`, `+${moduleData.buffers.system_buffer_ram.toFixed(1)}`, '+30%'],
   ];
 
   autoTable(doc, {
     startY: yPos,
-    head: [['Component', 'vCPU', 'RAM']],
+    head: [['Component', 'vCPU', 'RAM (GB)', 'Buffer %']],
     body: bufferData,
     theme: 'striped',
     headStyles: {
-      fillColor: secondaryColor,
-      textColor: [255, 255, 255],
+      fillColor: COLORS.secondary,
+      textColor: COLORS.white,
+      fontStyle: 'bold',
+      fontSize: 10,
     },
-    styles: { fontSize: 10, cellPadding: 5 },
-    margin: { left: 14, right: 14 },
-    didParseCell: (data) => {
-      if (data.row.index === bufferData.length - 1) {
-        data.cell.styles.fontStyle = 'bold';
-        data.cell.styles.fillColor = [241, 245, 249];
-      }
+    bodyStyles: { fontSize: 10 },
+    styles: { cellPadding: 8 },
+    columnStyles: {
+      0: { fontStyle: 'bold', cellWidth: 70 },
+      1: { halign: 'center', cellWidth: 35 },
+      2: { halign: 'center', cellWidth: 35 },
+      3: { halign: 'center', cellWidth: 30 },
     },
+    margin: { left: margin, right: margin },
   });
 
   yPos = doc.lastAutoTable.finalY + 15;
 
-  // Notes Section
-  doc.setTextColor(...primaryColor);
+  // Final Totals
+  doc.setFillColor(...COLORS.success);
+  doc.roundedRect(margin, yPos, contentWidth, 50, 3, 3, 'F');
+
+  doc.setTextColor(...COLORS.white);
   doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
-  doc.text('Important Notes', 14, yPos);
+  doc.text('FINAL RESOURCE REQUIREMENTS', pageWidth / 2, yPos + 15, { align: 'center' });
 
-  yPos += 8;
-  doc.setTextColor(...secondaryColor);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-
-  const notes = [
-    '• Storage requirements are NOT included in these calculations',
-    '• Calculations exclude Pre-Registration, KYC with OTP, and post-upload packet processing',
-    '• Buffer allocations: Monitoring & Logging (20%), Kubernetes Infrastructure (30%), System Buffer (30%)',
-    '• Peak TPS calculations assume external systems (ABIS) have maximum 300ms response times',
-    '• Based on MOSIP Platform Release 1.3.0 performance benchmarks',
+  const finalMetrics = [
+    { label: 'Total vCPU', value: formatNumber(moduleData.total_vcpu) },
+    { label: 'Total RAM', value: `${formatNumber(moduleData.total_ram)} GB` },
+    { label: 'Total Pods', value: formatNumber(moduleData.total_pods) },
   ];
 
-  notes.forEach((note, index) => {
-    doc.text(note, 14, yPos + (index * 6));
+  const metricW = contentWidth / 3;
+  finalMetrics.forEach((metric, index) => {
+    const x = margin + (index * metricW) + metricW / 2;
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(metric.value, x, yPos + 35, { align: 'center' });
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(metric.label, x, yPos + 45, { align: 'center' });
   });
 
-  // Footer
+  yPos += 70;
+
+  // Recommendations
+  drawSectionHeader(doc, 'Recommendations', margin, yPos);
+  yPos += 15;
+
+  const recommendations = [
+    'Deploy across multiple availability zones for high availability',
+    'Configure Horizontal Pod Autoscaler (HPA) for dynamic scaling',
+    'Implement monitoring with Prometheus and Grafana',
+    'Set appropriate resource requests and limits for all pods',
+    'Conduct load testing before production deployment',
+  ];
+
+  recommendations.forEach((rec, index) => {
+    doc.setFillColor(...COLORS.primary);
+    doc.circle(margin + 5, yPos + (index * 10) + 2, 2, 'F');
+    doc.setTextColor(...COLORS.text);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(rec, margin + 12, yPos + (index * 10) + 4);
+  });
+
+  // =========================================================================
+  // PAGE 5: NOTES & DISCLAIMER
+  // =========================================================================
+  doc.addPage();
+  yPos = 20;
+
+  drawPageHeader(doc, 'Notes & Disclaimer', pageWidth);
+  yPos = 50;
+
+  // Assumptions
+  drawSectionHeader(doc, 'Assumptions', margin, yPos);
+  yPos += 15;
+
+  const assumptions = [
+    'Performance benchmarks based on MOSIP Platform Release 1.3.0',
+    `Baseline TPS: ${isRegistration ? '22.5' : '50'} transactions per second`,
+    'External system (ABIS) response time: max 300ms',
+    'Network latency between services not factored',
+  ];
+
+  assumptions.forEach((item, index) => {
+    doc.setFillColor(...COLORS.accent);
+    doc.circle(margin + 5, yPos + (index * 10) + 2, 2, 'F');
+    doc.setTextColor(...COLORS.text);
+    doc.setFontSize(9);
+    doc.text(item, margin + 12, yPos + (index * 10) + 4);
+  });
+
+  yPos += assumptions.length * 10 + 20;
+
+  // Exclusions
+  drawSectionHeader(doc, 'Exclusions', margin, yPos);
+  yPos += 15;
+
+  const exclusions = [
+    'Storage requirements',
+    'Pre-Registration module',
+    'KYC with OTP processing',
+    'Post-upload packet processing',
+    'Network bandwidth calculations',
+    'Disaster recovery infrastructure',
+  ];
+
+  exclusions.forEach((item, index) => {
+    doc.setFillColor(...COLORS.warning);
+    doc.circle(margin + 5, yPos + (index * 10) + 2, 2, 'F');
+    doc.setTextColor(...COLORS.text);
+    doc.setFontSize(9);
+    doc.text(item, margin + 12, yPos + (index * 10) + 4);
+  });
+
+  yPos += exclusions.length * 10 + 20;
+
+  // Disclaimer
+  doc.setFillColor(...COLORS.light);
+  doc.roundedRect(margin, yPos, contentWidth, 40, 3, 3, 'F');
+
+  doc.setTextColor(...COLORS.secondary);
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Disclaimer', margin + 8, yPos + 12);
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  const disclaimer = 'This report provides estimates based on theoretical calculations and benchmark data. Actual requirements may vary. Conduct load testing before production deployment.';
+  const disclaimerLines = doc.splitTextToSize(disclaimer, contentWidth - 16);
+  doc.text(disclaimerLines, margin + 8, yPos + 22);
+
+  // =========================================================================
+  // ADD FOOTERS TO ALL PAGES
+  // =========================================================================
   const pageCount = doc.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    doc.text(
-      `MOSIP Resource Calculator | Page ${i} of ${pageCount}`,
-      pageWidth / 2,
-      doc.internal.pageSize.getHeight() - 10,
-      { align: 'center' }
-    );
+
+    doc.setDrawColor(...COLORS.light);
+    doc.setLineWidth(0.5);
+    doc.line(margin, pageHeight - 15, pageWidth - margin, pageHeight - 15);
+
+    doc.setFontSize(7);
+    doc.setTextColor(...COLORS.textLight);
+    doc.text('MOSIP Resource Calculator', margin, pageHeight - 8);
+    doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin, pageHeight - 8, { align: 'right' });
+    doc.text(formatDate(), pageWidth / 2, pageHeight - 8, { align: 'center' });
   }
 
-  // Save the PDF
+  // Save PDF
   const fileName = `MOSIP_${moduleName.replace(/\s+/g, '_')}_Report_${new Date().toISOString().split('T')[0]}.pdf`;
   doc.save(fileName);
+}
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+function drawPageHeader(doc: jsPDF, title: string, pageWidth: number) {
+  doc.setFillColor(...COLORS.primary);
+  doc.rect(0, 0, pageWidth, 35, 'F');
+
+  doc.setTextColor(...COLORS.white);
+  doc.setFontSize(14);
+  doc.setFont('helvetica', 'bold');
+  doc.text(title, 15, 22);
+
+  doc.setFillColor(...COLORS.white);
+  doc.roundedRect(pageWidth - 45, 12, 30, 12, 2, 2, 'F');
+  doc.setTextColor(...COLORS.primary);
+  doc.setFontSize(8);
+  doc.text('MOSIP', pageWidth - 30, 20, { align: 'center' });
+}
+
+function drawSectionHeader(doc: jsPDF, title: string, x: number, y: number) {
+  doc.setFillColor(...COLORS.primary);
+  doc.rect(x, y, 4, 12, 'F');
+
+  doc.setTextColor(...COLORS.primary);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.text(title, x + 8, y + 9);
 }
 
 // =============================================================================
@@ -340,76 +572,47 @@ export function exportToExcel(
   const workbook = XLSX.utils.book_new();
 
   // Summary Sheet
-  const summaryData = [
+  const summaryData: (string | number)[][] = [
     ['MOSIP Resource Calculator - Server Sizing Report'],
     [''],
     ['Module', moduleName],
-    ['Generated', formatDate()],
-    ['Version', 'Platform Release 1.3.0'],
+    ['Generated', formatDateTime()],
+    ['Platform Version', 'MOSIP 1.3.0'],
     [''],
-    ['EXECUTIVE SUMMARY'],
-    ['Metric', 'Value'],
-    ['Total vCPU', moduleData.total_vcpu],
-    ['Total RAM (GB)', moduleData.total_ram],
-    ['Total Pods', moduleData.total_pods],
+    ['RESOURCE REQUIREMENTS'],
+    ['Resource', 'Value', 'Unit'],
+    ['Total vCPU', moduleData.total_vcpu, 'cores'],
+    ['Total RAM', moduleData.total_ram, 'GB'],
+    ['Total Pods', moduleData.total_pods, 'replicas'],
   ];
 
   if (isRegistration && result.registration_duration_days > 0) {
-    summaryData.push(['Working Days to Complete', result.registration_duration_days]);
+    summaryData.push(['Completion Time', result.registration_duration_days, 'working days']);
   }
 
   summaryData.push(['']);
   summaryData.push(['PERFORMANCE METRICS']);
-  summaryData.push(['Metric', 'Value']);
 
   if (isRegistration) {
-    summaryData.push(['Daily Registrations', result.registration.daily_registrations]);
-    summaryData.push(['Peak Daily Upload', result.registration.peak_daily_upload]);
+    summaryData.push(['Daily Registrations', result.registration.daily_registrations, '']);
+    summaryData.push(['Peak Daily Upload', result.registration.peak_daily_upload, '']);
   } else {
-    summaryData.push(['Daily Authentications', result.authentication.daily_authentications]);
-    summaryData.push(['Peak Hour Authentications', result.authentication.peak_hour_authentications]);
+    summaryData.push(['Daily Authentications', result.authentication.daily_authentications, '']);
+    summaryData.push(['Peak Hour Volume', result.authentication.peak_hour_authentications, '']);
   }
 
-  summaryData.push(['Peak TPS', moduleData.peak_tps]);
-  summaryData.push(['Scale Factor', moduleData.scale_factor]);
-  summaryData.push(['Baseline TPS', moduleData.baseline_tps]);
+  summaryData.push(['Peak TPS', moduleData.peak_tps, 'transactions/sec']);
+  summaryData.push(['Scale Factor', moduleData.scale_factor, 'x']);
 
   const summarySheet = XLSX.utils.aoa_to_sheet(summaryData);
-
-  // Set column widths
-  summarySheet['!cols'] = [{ wch: 30 }, { wch: 25 }];
-
-  // Style the header
-  summarySheet['A1'] = { v: 'MOSIP Resource Calculator - Server Sizing Report', t: 's' };
-
+  summarySheet['!cols'] = [{ wch: 25 }, { wch: 20 }, { wch: 15 }];
   XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary');
 
-  // Input Parameters Sheet
-  const inputData = [
-    ['INPUT PARAMETERS'],
-    ['Parameter', 'Value'],
-  ];
-
-  if (isRegistration) {
-    inputData.push(['Total Population', result.registration.inputs.total_population]);
-    inputData.push(['Registration Devices', result.registration.inputs.num_registration_devices]);
-    inputData.push(['Registrations per Device per Day', result.registration.inputs.registrations_per_device_per_day]);
-    inputData.push(['Upload Window (hours)', result.registration.inputs.upload_window_hours]);
-    inputData.push(['Peak Day Multiplier', result.registration.inputs.peak_day_multiplier]);
-  } else {
-    inputData.push(['Total Population', result.authentication.inputs.total_population]);
-    inputData.push(['Daily Auth Rate (%)', result.authentication.inputs.avg_auth_percentage * 100]);
-    inputData.push(['Peak Hour Rate (%)', result.authentication.inputs.peak_hour_percentage * 100]);
-  }
-
-  const inputSheet = XLSX.utils.aoa_to_sheet(inputData);
-  inputSheet['!cols'] = [{ wch: 35 }, { wch: 20 }];
-  XLSX.utils.book_append_sheet(workbook, inputSheet, 'Input Parameters');
-
   // Services Sheet
-  const servicesData = [
-    ['SERVICE-WISE RESOURCE BREAKDOWN'],
-    ['Service', 'vCPU/Pod', 'RAM/Pod (GB)', 'Base Pods', 'Scaled Pods', 'Total vCPU', 'Total RAM (GB)', 'Type'],
+  const servicesData: (string | number)[][] = [
+    ['SERVICE RESOURCE ALLOCATION'],
+    [''],
+    ['Service', 'vCPU/Pod', 'RAM/Pod', 'Base Pods', 'Scaled Pods', 'Total vCPU', 'Total RAM', 'Type'],
   ];
 
   moduleData.services.forEach(service => {
@@ -425,41 +628,34 @@ export function exportToExcel(
     ]);
   });
 
-  // Add totals row
-  servicesData.push([
-    'TOTAL',
-    '',
-    '',
-    '',
-    moduleData.total_pods,
-    moduleData.total_vcpu,
-    moduleData.total_ram,
-    '',
-  ]);
+  servicesData.push(['']);
+  servicesData.push(['TOTAL', '', '', '', moduleData.total_pods, moduleData.buffers.base_vcpu, moduleData.buffers.base_ram, '']);
 
   const servicesSheet = XLSX.utils.aoa_to_sheet(servicesData);
   servicesSheet['!cols'] = [
-    { wch: 40 }, { wch: 12 }, { wch: 15 }, { wch: 12 },
-    { wch: 12 }, { wch: 12 }, { wch: 15 }, { wch: 12 },
+    { wch: 35 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
+    { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 10 },
   ];
   XLSX.utils.book_append_sheet(workbook, servicesSheet, 'Services');
 
-  // Buffer Allocation Sheet
-  const bufferData = [
+  // Buffer Sheet
+  const bufferData: (string | number)[][] = [
     ['BUFFER ALLOCATION'],
-    ['Component', 'vCPU', 'RAM (GB)'],
-    ['Base Resources', moduleData.buffers.base_vcpu, moduleData.buffers.base_ram],
-    ['Monitoring & Logging (20%)', moduleData.buffers.monitoring_logging_vcpu, moduleData.buffers.monitoring_logging_ram],
-    ['Kubernetes Infrastructure (30%)', moduleData.buffers.kubernetes_infra_vcpu, moduleData.buffers.kubernetes_infra_ram],
-    ['System Buffer (30%)', moduleData.buffers.system_buffer_vcpu, moduleData.buffers.system_buffer_ram],
-    ['TOTAL', moduleData.total_vcpu, moduleData.total_ram],
+    [''],
+    ['Component', 'vCPU', 'RAM (GB)', 'Buffer %'],
+    ['Base Resources', moduleData.buffers.base_vcpu, moduleData.buffers.base_ram, '100%'],
+    ['Monitoring & Logging', moduleData.buffers.monitoring_logging_vcpu, moduleData.buffers.monitoring_logging_ram, '+20%'],
+    ['Kubernetes Infrastructure', moduleData.buffers.kubernetes_infra_vcpu, moduleData.buffers.kubernetes_infra_ram, '+30%'],
+    ['System Buffer', moduleData.buffers.system_buffer_vcpu, moduleData.buffers.system_buffer_ram, '+30%'],
+    [''],
+    ['FINAL TOTAL', moduleData.total_vcpu, moduleData.total_ram, ''],
   ];
 
   const bufferSheet = XLSX.utils.aoa_to_sheet(bufferData);
-  bufferSheet['!cols'] = [{ wch: 35 }, { wch: 15 }, { wch: 15 }];
-  XLSX.utils.book_append_sheet(workbook, bufferSheet, 'Buffer Allocation');
+  bufferSheet['!cols'] = [{ wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 12 }];
+  XLSX.utils.book_append_sheet(workbook, bufferSheet, 'Buffers');
 
-  // Save the Excel file
+  // Save
   const fileName = `MOSIP_${moduleName.replace(/\s+/g, '_')}_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
   XLSX.writeFile(workbook, fileName);
 }
