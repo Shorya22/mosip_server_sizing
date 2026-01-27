@@ -1,3 +1,6 @@
+/* Inter Font Import - must be first */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 /* Global Reset and Base Styles */
 *,
 *::before,
@@ -26,6 +29,3 @@ body {
 #root {
   min-height: 100vh;
 }
-
-/* Inter Font Import */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');

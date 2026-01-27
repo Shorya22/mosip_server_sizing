@@ -36,10 +36,6 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
     setValues(DEFAULT_VALUES);
   };
 
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat().format(num);
-  };
-
   const isRegistration = mode === 'registration';
   const isAuthentication = mode === 'authentication';
 
@@ -58,17 +54,14 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
                 {isRegistration ? 'Target population for ID registration' : 'Population eligible for authentication'}
               </span>
             </label>
-            <div className="input-wrapper">
-              <input
-                type="number"
-                id="total_population"
-                value={values.total_population}
-                onChange={(e) => handleChange('total_population', e.target.value)}
-                min="1"
-                required
-              />
-              <span className="input-preview">{formatNumber(values.total_population)}</span>
-            </div>
+            <input
+              type="number"
+              id="total_population"
+              value={values.total_population}
+              onChange={(e) => handleChange('total_population', e.target.value)}
+              min="1"
+              required
+            />
           </div>
 
           {isRegistration && (
@@ -79,17 +72,14 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
                   Number of Registration Devices
                   <span className="helper-text">Total registration kiosks/machines</span>
                 </label>
-                <div className="input-wrapper">
-                  <input
-                    type="number"
-                    id="num_registration_devices"
-                    value={values.num_registration_devices}
-                    onChange={(e) => handleChange('num_registration_devices', e.target.value)}
-                    min="1"
-                    required
-                  />
-                  <span className="input-preview">{formatNumber(values.num_registration_devices)}</span>
-                </div>
+                <input
+                  type="number"
+                  id="num_registration_devices"
+                  value={values.num_registration_devices}
+                  onChange={(e) => handleChange('num_registration_devices', e.target.value)}
+                  min="1"
+                  required
+                />
               </div>
 
               <div className="form-group">
