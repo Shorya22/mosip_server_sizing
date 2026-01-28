@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { SummaryCard } from './SummaryCard';
 import { ModuleDetails } from './ModuleDetails';
 import { ReportModal } from './ReportModal';
-import { FileText, FileBarChart } from 'lucide-react';
+import { FileText, FileBarChart, Layers } from 'lucide-react';
 import type { CombinedOutput, CalculatorMode } from '../types';
 
 interface ResultsPanelProps {
@@ -31,7 +31,15 @@ export function ResultsPanel({ result, moduleType = 'registration' }: ResultsPan
   return (
     <div className="results-panel">
       <div className="results-header">
-        <h2>Calculation Results</h2>
+        <div className="results-title-section">
+          <h2>Calculation Results</h2>
+          {result.mosip_version && (
+            <span className="version-badge">
+              <Layers size={14} />
+              MOSIP {result.mosip_version}
+            </span>
+          )}
+        </div>
         <div className="results-actions">
           <button className="btn btn-primary" onClick={() => setShowReportModal(true)}>
             <FileBarChart size={16} />

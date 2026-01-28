@@ -2,25 +2,15 @@
 MOSIP Resource Calculator Service
 
 This module implements the calculation logic based on the official
-MOSIP Resource Calculator Excel (Platform Release 1.3.0).
+MOSIP Resource Calculator Excel.
 
-Formulas and constants are derived from the Excel file:
-- Registration Upload & SyncData sheet
-- IDAuthentication sheet
+Supports multiple MOSIP versions through configuration.
 """
 
 import math
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
-from app.core.constants import (
-    REGISTRATION_BASELINE_TPS,
-    REGISTRATION_SERVICES,
-    IDA_BASELINE_TPS,
-    IDA_SERVICES,
-    BUFFER_MONITORING_LOGGING,
-    BUFFER_KUBERNETES_INFRA,
-    BUFFER_SYSTEM,
-)
+from app.core.versions import get_version_config, DEFAULT_VERSION
 from app.models.schemas import (
     RegistrationInput,
     RegistrationOutput,
@@ -39,10 +29,27 @@ class ResourceCalculator:
     MOSIP Resource Calculator Engine
 
     Implements the calculation logic from the official Excel calculator.
+    Supports multiple MOSIP versions.
     """
 
-    @staticmethod
-    def _calculate_buffers(base_vcpu: float, base_ram: float) -> Tuple[BufferBreakdown, float, float]:
+    def __init__(self, version: str = DEFAULT_VERSION):
+        """Initialize calculator with a specific MOSIP version."""
+        self.version = version
+        self.config = get_version_config(version)
+
+    def _get_buffer_config(self) -> dict:
+        """Get buffer configuration for the current version."""
+        return self.config["buffers"]
+
+    def _get_registration_config(self) -> dict:
+        """Get registration module configuration for the current version."""
+        return self.config["registration"]
+
+    def _get_authentication_config(self) -> dict:
+        """Get authentication module configuration for the current version."""
+        return self.config["authentication"]
+
+    def _calculate_buffers(self, base_vcpu: float, base_ram: float) -> Tuple[BufferBreakdown, float, float]:
         """
         Calculate buffer resources based on Excel formula.
 
@@ -54,17 +61,19 @@ class ResourceCalculator:
         Returns:
             Tuple of (BufferBreakdown, total_vcpu, total_ram)
         """
+        buffer_config = self._get_buffer_config()
+
         # A - Monitoring, Logging, Alerts (20% of base)
-        monitoring_vcpu = base_vcpu * BUFFER_MONITORING_LOGGING
-        monitoring_ram = base_ram * BUFFER_MONITORING_LOGGING
+        monitoring_vcpu = base_vcpu * buffer_config["monitoring_logging"]
+        monitoring_ram = base_ram * buffer_config["monitoring_logging"]
 
         # B - Kubernetes infra (30% of (base + A))
-        k8s_vcpu = (base_vcpu + monitoring_vcpu) * BUFFER_KUBERNETES_INFRA
-        k8s_ram = (base_ram + monitoring_ram) * BUFFER_KUBERNETES_INFRA
+        k8s_vcpu = (base_vcpu + monitoring_vcpu) * buffer_config["kubernetes_infra"]
+        k8s_ram = (base_ram + monitoring_ram) * buffer_config["kubernetes_infra"]
 
         # C - System buffer (30% of B)
-        system_vcpu = k8s_vcpu * BUFFER_SYSTEM
-        system_ram = k8s_ram * BUFFER_SYSTEM
+        system_vcpu = k8s_vcpu * buffer_config["system_buffer"]
+        system_ram = k8s_ram * buffer_config["system_buffer"]
 
         # Total
         total_vcpu = base_vcpu + monitoring_vcpu + k8s_vcpu + system_vcpu
@@ -144,10 +153,14 @@ class ResourceCalculator:
         1. Daily Registrations = devices × registrations_per_device_per_day
         2. Peak Daily Upload = Daily Registrations × peak_day_multiplier
         3. Peak TPS = CEILING(Peak Daily Upload / (upload_window_hours × 3600))
-        4. Scale Factor = MAX(1.0, CEILING(Peak TPS / baseline_tps (22.5)))
+        4. Scale Factor = MAX(1.0, CEILING(Peak TPS / baseline_tps))
         5. Resources = Base Resources × Scale Factor + Buffers
         6. Duration = CEILING(Total Population / Daily Registrations)
         """
+        reg_config = self._get_registration_config()
+        baseline_tps = reg_config["baseline_tps"]
+        services = reg_config["services"]
+
         # Step 1: Calculate daily registrations
         daily_registrations = (
             input_data.num_registration_devices *
@@ -158,18 +171,15 @@ class ResourceCalculator:
         peak_daily_upload = int(daily_registrations * input_data.peak_day_multiplier)
 
         # Step 3: Calculate peak TPS
-        # Peak TPS = CEILING(Peak Daily Upload / (upload window in seconds))
-        # Excel uses CEILING for this value
         upload_window_seconds = input_data.upload_window_hours * 3600
         peak_tps = math.ceil(peak_daily_upload / upload_window_seconds)
 
-        # Step 4: Calculate scale factor (minimum of 1.0 - can't go below base config)
-        # Excel uses CEILING for scale factor as well
-        scale_factor = max(1.0, math.ceil(peak_tps / REGISTRATION_BASELINE_TPS))
+        # Step 4: Calculate scale factor (minimum of 1.0)
+        scale_factor = max(1.0, math.ceil(peak_tps / baseline_tps))
 
         # Step 5: Calculate service resources
-        services, base_vcpu, base_ram, total_pods = self._calculate_service_resources(
-            REGISTRATION_SERVICES,
+        service_resources, base_vcpu, base_ram, total_pods = self._calculate_service_resources(
+            services,
             scale_factor
         )
 
@@ -183,14 +193,14 @@ class ResourceCalculator:
             inputs=input_data,
             daily_registrations=daily_registrations,
             peak_daily_upload=peak_daily_upload,
-            peak_tps=peak_tps,  # Already an integer from CEILING
-            scale_factor=scale_factor,  # Already an integer from CEILING
-            baseline_tps=REGISTRATION_BASELINE_TPS,
+            peak_tps=peak_tps,
+            scale_factor=scale_factor,
+            baseline_tps=baseline_tps,
             duration_days=duration_days,
             total_vcpu=math.ceil(total_vcpu),
             total_ram=math.ceil(total_ram),
             total_pods=total_pods,
-            services=services,
+            services=service_resources,
             buffers=buffers,
         )
 
@@ -202,9 +212,13 @@ class ResourceCalculator:
         1. Daily Authentications = population × avg_auth_percentage
         2. Peak Hour Authentications = Daily Authentications × peak_hour_percentage
         3. Peak TPS = CEILING(Peak Hour Authentications / 3600)
-        4. Scale Factor = MAX(1.0, CEILING(Peak TPS / baseline_tps (50)))
+        4. Scale Factor = MAX(1.0, CEILING(Peak TPS / baseline_tps))
         5. Resources = Base Resources × Scale Factor + Buffers
         """
+        auth_config = self._get_authentication_config()
+        baseline_tps = auth_config["baseline_tps"]
+        services = auth_config["services"]
+
         # Step 1: Calculate daily authentications
         daily_authentications = int(
             input_data.total_population * input_data.avg_auth_percentage
@@ -216,16 +230,14 @@ class ResourceCalculator:
         )
 
         # Step 3: Calculate peak TPS
-        # Excel uses CEILING for this value
         peak_tps = math.ceil(peak_hour_authentications / 3600)
 
-        # Step 4: Calculate scale factor (minimum of 1.0 - can't go below base config)
-        # Excel uses CEILING for scale factor as well
-        scale_factor = max(1.0, math.ceil(peak_tps / IDA_BASELINE_TPS))
+        # Step 4: Calculate scale factor (minimum of 1.0)
+        scale_factor = max(1.0, math.ceil(peak_tps / baseline_tps))
 
         # Step 5: Calculate service resources
-        services, base_vcpu, base_ram, total_pods = self._calculate_service_resources(
-            IDA_SERVICES,
+        service_resources, base_vcpu, base_ram, total_pods = self._calculate_service_resources(
+            services,
             scale_factor
         )
 
@@ -236,13 +248,13 @@ class ResourceCalculator:
             inputs=input_data,
             daily_authentications=daily_authentications,
             peak_hour_authentications=peak_hour_authentications,
-            peak_tps=peak_tps,  # Already an integer from CEILING
-            scale_factor=scale_factor,  # Already an integer from CEILING
-            baseline_tps=IDA_BASELINE_TPS,
+            peak_tps=peak_tps,
+            scale_factor=scale_factor,
+            baseline_tps=baseline_tps,
             total_vcpu=math.ceil(total_vcpu),
             total_ram=math.ceil(total_ram),
             total_pods=total_pods,
-            services=services,
+            services=service_resources,
             buffers=buffers,
         )
 
@@ -304,8 +316,14 @@ class ResourceCalculator:
             registration_duration_days=registration_result.duration_days,
             registration=registration_result,
             authentication=authentication_result,
+            mosip_version=self.version,
         )
 
 
-# Singleton instance
+def get_calculator(version: Optional[str] = None) -> ResourceCalculator:
+    """Factory function to get a calculator instance for a specific version."""
+    return ResourceCalculator(version or DEFAULT_VERSION)
+
+
+# Default calculator instance for backward compatibility
 calculator = ResourceCalculator()

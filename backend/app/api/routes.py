@@ -3,20 +3,19 @@ MOSIP Resource Calculator API Routes
 
 Provides REST API endpoints for calculating server resources
 for MOSIP Registration and ID Authentication modules.
+
+Supports multiple MOSIP versions.
 """
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
-from app.core.constants import (
-    REGISTRATION_SERVICES,
-    IDA_SERVICES,
-    REGISTRATION_BASELINE_TPS,
-    IDA_BASELINE_TPS,
-    BUFFER_MONITORING_LOGGING,
-    BUFFER_KUBERNETES_INFRA,
-    BUFFER_SYSTEM,
+from app.core.versions import (
+    get_version_config,
+    get_version_info,
+    SUPPORTED_VERSIONS,
+    DEFAULT_VERSION,
 )
 from app.models.schemas import (
     RegistrationInput,
@@ -27,8 +26,10 @@ from app.models.schemas import (
     CombinedOutput,
     HealthResponse,
     ErrorResponse,
+    VersionInfo,
+    VersionListResponse,
 )
-from app.services.calculator import calculator
+from app.services.calculator import get_calculator
 
 
 router = APIRouter()
@@ -54,38 +55,67 @@ async def health_check():
 
 
 @router.get(
+    "/versions",
+    response_model=VersionListResponse,
+    tags=["Configuration"],
+    summary="Get available MOSIP versions"
+)
+async def get_versions():
+    """
+    Get list of available MOSIP versions for calculations.
+
+    Returns all supported versions with their details and the default version.
+    """
+    versions = get_version_info()
+    return VersionListResponse(
+        versions=[VersionInfo(**v) for v in versions],
+        default_version=DEFAULT_VERSION,
+    )
+
+
+@router.get(
     "/config",
     tags=["Configuration"],
     summary="Get calculator configuration and defaults"
 )
-async def get_configuration():
+async def get_configuration(version: str = DEFAULT_VERSION):
     """
     Get the calculator configuration including:
     - Service definitions for both modules
     - Baseline TPS values
     - Buffer percentages
     - Default input values
+
+    **Query Parameters:**
+    - `version`: MOSIP version (default: 1.3.0)
     """
+    try:
+        config = get_version_config(version)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
     return {
+        "version": version,
+        "release_name": config["release_name"],
         "registration": {
-            "baseline_tps": REGISTRATION_BASELINE_TPS,
-            "services": REGISTRATION_SERVICES,
+            "baseline_tps": config["registration"]["baseline_tps"],
+            "services": config["registration"]["services"],
             "defaults": {
-                "upload_window_hours": 1.0,
-                "peak_day_multiplier": 1.2,
+                "upload_window_hours": config["registration"]["default_upload_window_hours"],
+                "peak_day_multiplier": config["registration"]["default_peak_day_multiplier"],
             }
         },
         "authentication": {
-            "baseline_tps": IDA_BASELINE_TPS,
-            "services": IDA_SERVICES,
+            "baseline_tps": config["authentication"]["baseline_tps"],
+            "services": config["authentication"]["services"],
             "defaults": {
-                "peak_hour_percentage": 0.08,
+                "peak_hour_percentage": config["authentication"]["default_peak_hour_percentage"],
             }
         },
         "buffers": {
-            "monitoring_logging_percentage": BUFFER_MONITORING_LOGGING,
-            "kubernetes_infra_percentage": BUFFER_KUBERNETES_INFRA,
-            "system_buffer_percentage": BUFFER_SYSTEM,
+            "monitoring_logging_percentage": config["buffers"]["monitoring_logging"],
+            "kubernetes_infra_percentage": config["buffers"]["kubernetes_infra"],
+            "system_buffer_percentage": config["buffers"]["system_buffer"],
         },
         "sample_inputs": {
             "total_population": 100000000,
@@ -110,7 +140,7 @@ async def get_configuration():
         422: {"description": "Validation error", "model": ErrorResponse},
     }
 )
-async def calculate_registration(input_data: RegistrationInput):
+async def calculate_registration(input_data: RegistrationInput, version: str = DEFAULT_VERSION):
     """
     Calculate server resources for the Registration Upload & SyncData module.
 
@@ -127,10 +157,16 @@ async def calculate_registration(input_data: RegistrationInput):
     - `registrations_per_device_per_day`: Typical registrations per device per day
     - `upload_window_hours`: Hours available for packet upload (default: 1)
     - `peak_day_multiplier`: Multiplier for peak day load (default: 1.2)
+
+    **Query Parameters:**
+    - `version`: MOSIP version (default: 1.3.0)
     """
     try:
-        result = calculator.calculate_registration(input_data)
+        calc = get_calculator(version)
+        result = calc.calculate_registration(input_data)
         return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -149,7 +185,7 @@ async def calculate_registration(input_data: RegistrationInput):
         422: {"description": "Validation error", "model": ErrorResponse},
     }
 )
-async def calculate_authentication(input_data: AuthenticationInput):
+async def calculate_authentication(input_data: AuthenticationInput, version: str = DEFAULT_VERSION):
     """
     Calculate server resources for the ID Authentication module.
 
@@ -164,10 +200,16 @@ async def calculate_authentication(input_data: AuthenticationInput):
     - `total_population`: Total population having National ID
     - `avg_auth_percentage`: Average authentication per day as percentage (e.g., 0.1 = 10%)
     - `peak_hour_percentage`: Peak hour as percentage of daily (default: 0.08 = 8%)
+
+    **Query Parameters:**
+    - `version`: MOSIP version (default: 1.3.0)
     """
     try:
-        result = calculator.calculate_authentication(input_data)
+        calc = get_calculator(version)
+        result = calc.calculate_authentication(input_data)
         return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -205,10 +247,14 @@ async def calculate_combined(input_data: CombinedInput):
     - `upload_window_hours`: Upload window hours (optional, default: 1)
     - `peak_day_multiplier`: Peak day multiplier (optional, default: 1.2)
     - `peak_hour_percentage`: Peak hour percentage (optional, default: 0.08)
+    - `mosip_version`: MOSIP version for calculation (optional, default: 1.3.0)
     """
     try:
-        result = calculator.calculate_combined(input_data)
+        calc = get_calculator(input_data.mosip_version)
+        result = calc.calculate_combined(input_data)
         return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -222,19 +268,30 @@ async def calculate_combined(input_data: CombinedInput):
     tags=["Services"],
     summary="Get Registration module services list"
 )
-async def get_registration_services():
-    """Get the list of services used in Registration module calculations."""
-    return {
-        "module": "Registration Upload & SyncData",
-        "baseline_tps": REGISTRATION_BASELINE_TPS,
-        "services": [
-            {
-                "name": name,
-                **config
-            }
-            for name, config in REGISTRATION_SERVICES.items()
-        ]
-    }
+async def get_registration_services(version: str = DEFAULT_VERSION):
+    """
+    Get the list of services used in Registration module calculations.
+
+    **Query Parameters:**
+    - `version`: MOSIP version (default: 1.3.0)
+    """
+    try:
+        config = get_version_config(version)
+        reg_config = config["registration"]
+        return {
+            "version": version,
+            "module": "Registration Upload & SyncData",
+            "baseline_tps": reg_config["baseline_tps"],
+            "services": [
+                {
+                    "name": name,
+                    **svc_config
+                }
+                for name, svc_config in reg_config["services"].items()
+            ]
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.get(
@@ -242,16 +299,27 @@ async def get_registration_services():
     tags=["Services"],
     summary="Get Authentication module services list"
 )
-async def get_authentication_services():
-    """Get the list of services used in ID Authentication module calculations."""
-    return {
-        "module": "ID Authentication",
-        "baseline_tps": IDA_BASELINE_TPS,
-        "services": [
-            {
-                "name": name,
-                **config
-            }
-            for name, config in IDA_SERVICES.items()
-        ]
-    }
+async def get_authentication_services(version: str = DEFAULT_VERSION):
+    """
+    Get the list of services used in ID Authentication module calculations.
+
+    **Query Parameters:**
+    - `version`: MOSIP version (default: 1.3.0)
+    """
+    try:
+        config = get_version_config(version)
+        auth_config = config["authentication"]
+        return {
+            "version": version,
+            "module": "ID Authentication",
+            "baseline_tps": auth_config["baseline_tps"],
+            "services": [
+                {
+                    "name": name,
+                    **svc_config
+                }
+                for name, svc_config in auth_config["services"].items()
+            ]
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))

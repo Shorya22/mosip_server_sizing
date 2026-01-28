@@ -1520,3 +1520,87 @@ body {
 .report-footer p {
   margin: 4px 0;
 }
+
+/* =============================================================================
+   VERSION SELECTOR STYLES
+   ============================================================================= */
+
+.version-section {
+  background: linear-gradient(135deg, rgba(30, 64, 175, 0.03) 0%, rgba(30, 64, 175, 0.01) 100%);
+  border: 1px solid rgba(30, 64, 175, 0.1);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 8px;
+}
+
+.version-section .section-title {
+  color: var(--color-primary);
+  margin-bottom: 12px;
+}
+
+.version-selector {
+  gap: 8px;
+}
+
+.version-selector label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text);
+  margin-bottom: 4px;
+}
+
+.version-dropdown {
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9375rem;
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  cursor: pointer;
+  transition: var(--transition);
+  width: 100%;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 10px center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 40px;
+}
+
+.version-dropdown:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+}
+
+.version-dropdown:disabled {
+  background: var(--color-bg);
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.version-description {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+  margin-top: 4px;
+}
+
+/* Results Title with Version Badge */
+.results-title-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}

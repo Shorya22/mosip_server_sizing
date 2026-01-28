@@ -1,12 +1,15 @@
-import { useState } from 'react';
-import { Calculator, Settings, Users, Monitor, Clock, TrendingUp, Percent } from 'lucide-react';
-import type { CombinedInput, CalculatorMode } from '../types';
+import { useState, useEffect } from 'react';
+import { Calculator, Settings, Users, Monitor, Clock, TrendingUp, Percent, Layers } from 'lucide-react';
+import type { CombinedInput, CalculatorMode, VersionInfo } from '../types';
+import { calculatorApi } from '../api/calculator';
 
 interface InputFormProps {
   mode: CalculatorMode;
   onCalculate: (input: CombinedInput) => void;
   isLoading: boolean;
 }
+
+const DEFAULT_VERSION = '1.3.0';
 
 const DEFAULT_VALUES: CombinedInput = {
   total_population: 100000000,
@@ -16,11 +19,39 @@ const DEFAULT_VALUES: CombinedInput = {
   upload_window_hours: 1,
   peak_day_multiplier: 1.2,
   peak_hour_percentage: 0.08,
+  mosip_version: DEFAULT_VERSION,
 };
 
 export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
   const [values, setValues] = useState<CombinedInput>(DEFAULT_VALUES);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [versions, setVersions] = useState<VersionInfo[]>([]);
+  const [versionsLoading, setVersionsLoading] = useState(true);
+
+  // Fetch available versions on component mount
+  useEffect(() => {
+    const fetchVersions = async () => {
+      try {
+        const response = await calculatorApi.getVersions();
+        setVersions(response.versions);
+        // Set default version from API
+        const defaultVersion = response.versions.find(v => v.is_default);
+        if (defaultVersion) {
+          setValues(prev => ({ ...prev, mosip_version: defaultVersion.version }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch versions:', error);
+        // Fallback to hardcoded versions if API fails
+        setVersions([
+          { version: '1.3.0', release_name: 'Platform Release 1.3.0', description: 'Stable release', is_default: true },
+          { version: '1.4.0', release_name: 'Platform Release 1.4.0', description: 'Latest release', is_default: false },
+        ]);
+      } finally {
+        setVersionsLoading(false);
+      }
+    };
+    fetchVersions();
+  }, []);
 
   const handleChange = (field: keyof CombinedInput, value: string) => {
     const numValue = parseFloat(value) || 0;
@@ -41,6 +72,42 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="input-form">
+      {/* MOSIP Version Selector */}
+      <div className="form-section version-section">
+        <h3 className="section-title">
+          <Layers size={18} />
+          MOSIP Platform Version
+        </h3>
+        <div className="form-group version-selector">
+          <label htmlFor="mosip_version">
+            Select Version
+            <span className="helper-text">Choose the MOSIP platform version for resource calculation</span>
+          </label>
+          <select
+            id="mosip_version"
+            value={values.mosip_version}
+            onChange={(e) => setValues(prev => ({ ...prev, mosip_version: e.target.value }))}
+            disabled={versionsLoading}
+            className="version-dropdown"
+          >
+            {versionsLoading ? (
+              <option value="">Loading versions...</option>
+            ) : (
+              versions.map((v) => (
+                <option key={v.version} value={v.version}>
+                  {v.release_name} {v.is_default ? '(Default)' : ''}
+                </option>
+              ))
+            )}
+          </select>
+          {!versionsLoading && versions.find(v => v.version === values.mosip_version) && (
+            <span className="version-description">
+              {versions.find(v => v.version === values.mosip_version)?.description}
+            </span>
+          )}
+        </div>
+      </div>
+
       <div className="form-section">
         <h3 className="section-title">
           <Users size={18} />

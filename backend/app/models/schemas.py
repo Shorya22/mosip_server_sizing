@@ -192,6 +192,13 @@ class CombinedInput(BaseModel):
     peak_day_multiplier: float = Field(default=1.2, gt=1.0, le=3.0)
     peak_hour_percentage: float = Field(default=0.08, gt=0, le=1.0)
 
+    # MOSIP Version
+    mosip_version: str = Field(
+        default="1.3.0",
+        description="MOSIP platform version for calculation",
+        examples=["1.3.0", "1.4.0"]
+    )
+
 
 class SummaryRow(BaseModel):
     """Summary row for a module"""
@@ -220,6 +227,9 @@ class CombinedOutput(BaseModel):
     registration: RegistrationOutput
     authentication: AuthenticationOutput
 
+    # Version info
+    mosip_version: str = "1.3.0"
+
 
 # =============================================================================
 # API RESPONSE SCHEMAS
@@ -238,3 +248,19 @@ class ErrorResponse(BaseModel):
 
     error: str
     detail: Optional[str] = None
+
+
+class VersionInfo(BaseModel):
+    """MOSIP version information"""
+
+    version: str
+    release_name: str
+    description: str
+    is_default: bool = False
+
+
+class VersionListResponse(BaseModel):
+    """List of available MOSIP versions"""
+
+    versions: List[VersionInfo]
+    default_version: str

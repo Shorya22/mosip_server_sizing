@@ -49,7 +49,7 @@ export function exportToPDF(
   doc.text('MOSIP Server Sizing Report', m, 14);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${moduleName}  |  ${formatDate()}  |  Platform: MOSIP 1.3.0`, pageWidth - m, 14, { align: 'right' });
+  doc.text(`${moduleName}  |  ${formatDate()}  |  Platform: MOSIP ${result.mosip_version || '1.3.0'}`, pageWidth - m, 14, { align: 'right' });
 
   let y = 30;
 

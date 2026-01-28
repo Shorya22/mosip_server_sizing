@@ -6,6 +6,7 @@ import type {
   AuthenticationOutput,
   CombinedInput,
   CombinedOutput,
+  VersionListResponse,
 } from '../types';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
@@ -24,39 +25,50 @@ export const calculatorApi = {
     return response.data;
   },
 
+  // Get available MOSIP versions
+  async getVersions(): Promise<VersionListResponse> {
+    const response = await api.get<VersionListResponse>('/versions');
+    return response.data;
+  },
+
   // Get configuration
-  async getConfig() {
-    const response = await api.get('/config');
+  async getConfig(version?: string) {
+    const params = version ? { version } : {};
+    const response = await api.get('/config', { params });
     return response.data;
   },
 
   // Calculate Registration resources
-  async calculateRegistration(input: RegistrationInput): Promise<RegistrationOutput> {
-    const response = await api.post<RegistrationOutput>('/calculate/registration', input);
+  async calculateRegistration(input: RegistrationInput, version?: string): Promise<RegistrationOutput> {
+    const params = version ? { version } : {};
+    const response = await api.post<RegistrationOutput>('/calculate/registration', input, { params });
     return response.data;
   },
 
   // Calculate Authentication resources
-  async calculateAuthentication(input: AuthenticationInput): Promise<AuthenticationOutput> {
-    const response = await api.post<AuthenticationOutput>('/calculate/authentication', input);
+  async calculateAuthentication(input: AuthenticationInput, version?: string): Promise<AuthenticationOutput> {
+    const params = version ? { version } : {};
+    const response = await api.post<AuthenticationOutput>('/calculate/authentication', input, { params });
     return response.data;
   },
 
-  // Calculate Combined resources
+  // Calculate Combined resources (version is included in input)
   async calculateCombined(input: CombinedInput): Promise<CombinedOutput> {
     const response = await api.post<CombinedOutput>('/calculate/combined', input);
     return response.data;
   },
 
   // Get Registration services
-  async getRegistrationServices() {
-    const response = await api.get('/services/registration');
+  async getRegistrationServices(version?: string) {
+    const params = version ? { version } : {};
+    const response = await api.get('/services/registration', { params });
     return response.data;
   },
 
   // Get Authentication services
-  async getAuthenticationServices() {
-    const response = await api.get('/services/authentication');
+  async getAuthenticationServices(version?: string) {
+    const params = version ? { version } : {};
+    const response = await api.get('/services/authentication', { params });
     return response.data;
   },
 };

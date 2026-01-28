@@ -24,6 +24,7 @@ export interface CombinedInput {
   upload_window_hours: number;
   peak_day_multiplier: number;
   peak_hour_percentage: number;
+  mosip_version: string;
 }
 
 // =============================================================================
@@ -99,6 +100,23 @@ export interface CombinedOutput {
   registration_duration_days: number;
   registration: RegistrationOutput;
   authentication: AuthenticationOutput;
+  mosip_version: string;
+}
+
+// =============================================================================
+// VERSION TYPES
+// =============================================================================
+
+export interface VersionInfo {
+  version: string;
+  release_name: string;
+  description: string;
+  is_default: boolean;
+}
+
+export interface VersionListResponse {
+  versions: VersionInfo[];
+  default_version: string;
 }
 
 // =============================================================================
