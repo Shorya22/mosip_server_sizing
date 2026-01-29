@@ -30,7 +30,7 @@ function App() {
           registrations_per_device_per_day: input.registrations_per_device_per_day,
           upload_window_hours: input.upload_window_hours,
           peak_day_multiplier: input.peak_day_multiplier,
-        });
+        }, input.mosip_version);
         // Wrap in combined format for consistent display
         calculationResult = {
           summary: [{
@@ -47,13 +47,14 @@ function App() {
           registration_duration_days: regResult.duration_days,
           registration: regResult,
           authentication: null as unknown as CombinedOutput['authentication'],
+          mosip_version: input.mosip_version,
         };
       } else {
         const authResult = await calculatorApi.calculateAuthentication({
           total_population: input.total_population,
           avg_auth_percentage: input.avg_auth_percentage,
           peak_hour_percentage: input.peak_hour_percentage,
-        });
+        }, input.mosip_version);
         // Wrap in combined format for consistent display
         calculationResult = {
           summary: [{
@@ -70,6 +71,7 @@ function App() {
           registration_duration_days: 0,
           registration: null as unknown as CombinedOutput['registration'],
           authentication: authResult,
+          mosip_version: input.mosip_version,
         };
       }
 
@@ -120,7 +122,7 @@ function App() {
 
       <footer className="footer">
         <div className="container">
-          <p>MOSIP Resource Calculator | Based on Platform Release 1.3.0</p>
+          <p>MOSIP Resource Calculator | Supports Multiple Platform Versions</p>
           <p className="disclaimer">
             Note: Storage requirements are not included. Excludes Pre-Registration, KYC with OTP, and post-upload processing.
           </p>
