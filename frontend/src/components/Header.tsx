@@ -8,7 +8,6 @@ export function Header() {
           <Server size={32} />
           <div className="logo-text">
             <h1>MOSIP Resource Calculator</h1>
-            <span className="version">Platform Release 1.3.0</span>
           </div>
         </div>
         <div className="header-badge">
