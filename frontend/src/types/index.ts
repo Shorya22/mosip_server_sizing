@@ -20,6 +20,7 @@ export interface CombinedInput {
   total_population: number;
   num_registration_devices: number;
   registrations_per_device_per_day: number;
+  peak_registrations_per_day: number; // User input - total daily registrations
   avg_auth_percentage: number;
   upload_window_hours: number;
   peak_day_multiplier: number;

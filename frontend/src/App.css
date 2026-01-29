@@ -413,6 +413,7 @@ body {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-md);
   padding: 24px;
+  overflow: visible;
 }
 
 .results-panel.empty {
@@ -587,7 +588,7 @@ body {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   margin-bottom: 12px;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .module-header {
@@ -629,6 +630,7 @@ body {
 .module-content {
   padding: 20px;
   border-top: 1px solid var(--color-border);
+  overflow: visible;
 }
 
 /* Metrics Grid */
@@ -637,6 +639,7 @@ body {
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   margin-bottom: 24px;
+  overflow: visible;
 }
 
 @media (max-width: 768px) {
@@ -650,6 +653,7 @@ body {
   padding: 16px;
   border-radius: var(--radius-sm);
   text-align: center;
+  overflow: visible;
 }
 
 .metric-item.highlight {
@@ -1603,4 +1607,192 @@ body {
   border-radius: 20px;
   font-size: 0.75rem;
   font-weight: 600;
+}
+
+/* =============================================================================
+   CALCULATED FIELD STYLES
+   ============================================================================= */
+
+.calculated-field label {
+  color: var(--color-text-muted);
+}
+
+.calculated-field label svg {
+  color: var(--color-primary);
+}
+
+.calculated-value {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, rgba(30, 64, 175, 0.08) 0%, rgba(30, 64, 175, 0.04) 100%);
+  border: 1px dashed rgba(30, 64, 175, 0.3);
+  border-radius: var(--radius-sm);
+  cursor: help;
+}
+
+.calculated-value .value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--color-primary);
+}
+
+.calculated-value .formula-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  font-family: 'Monaco', 'Consolas', monospace;
+}
+
+/* =============================================================================
+   FORMULA TOOLTIP STYLES
+   ============================================================================= */
+
+.metric-with-formula {
+  position: relative;
+  cursor: help;
+  overflow: visible;
+}
+
+.metric-with-formula:hover .formula-tooltip,
+.metric-with-formula:focus .formula-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.formula-tooltip {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: white;
+  padding: 14px 18px;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  z-index: 99999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+  min-width: 200px;
+  text-align: center;
+}
+
+.formula-tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 10px solid transparent;
+  border-bottom-color: #1e293b;
+}
+
+.formula-tooltip .formula-label {
+  display: block;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
+
+.formula-tooltip .formula-expression {
+  display: block;
+  color: #34d399;
+  font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: rgba(52, 211, 153, 0.1);
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-top: 4px;
+}
+
+/* =============================================================================
+   SUMMARY CARD TOOLTIP STYLES
+   ============================================================================= */
+
+.summary-card.with-tooltip {
+  position: relative;
+  cursor: help;
+  overflow: visible;
+}
+
+.summary-card.with-tooltip:hover .summary-tooltip,
+.summary-card.with-tooltip:focus .summary-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.summary-tooltip {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  color: white;
+  padding: 14px 18px;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  z-index: 99999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  pointer-events: none;
+  min-width: 220px;
+  text-align: center;
+}
+
+.summary-tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 10px solid transparent;
+  border-bottom-color: #1e293b;
+}
+
+.summary-tooltip .tooltip-label {
+  display: block;
+  color: rgba(255, 255, 255, 0.8);
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+}
+
+.summary-tooltip .tooltip-formula {
+  display: block;
+  color: #34d399;
+  font-family: 'Monaco', 'Consolas', 'Courier New', monospace;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  background: rgba(52, 211, 153, 0.1);
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin-top: 4px;
+}
+
+/* Ensure summary grid doesn't clip tooltips */
+.summary-grid {
+  overflow: visible;
+}
+
+.summary-section {
+  overflow: visible;
 }

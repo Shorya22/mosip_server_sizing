@@ -5,6 +5,16 @@ interface SummaryCardProps {
   result: CombinedOutput;
 }
 
+// Tooltip component for showing formulas on summary cards
+function SummaryTooltip({ label, formula }: { label: string; formula: string }) {
+  return (
+    <div className="summary-tooltip">
+      <span className="tooltip-label">{label}</span>
+      <span className="tooltip-formula">{formula}</span>
+    </div>
+  );
+}
+
 export function SummaryCard({ result }: SummaryCardProps) {
   const formatNumber = (num: number) => new Intl.NumberFormat().format(num);
 
@@ -18,7 +28,7 @@ export function SummaryCard({ result }: SummaryCardProps) {
       </h3>
 
       <div className={`summary-grid ${!showDuration ? 'three-cols' : ''}`}>
-        <div className="summary-card total">
+        <div className="summary-card total with-tooltip">
           <div className="card-icon">
             <Cpu size={24} />
           </div>
@@ -26,9 +36,13 @@ export function SummaryCard({ result }: SummaryCardProps) {
             <span className="card-value">{formatNumber(result.total_vcpu)}</span>
             <span className="card-label">Total vCPU</span>
           </div>
+          <SummaryTooltip
+            label="Total vCPU"
+            formula="Σ (Service vCPU × Scaled Pods) × 1.8 buffers"
+          />
         </div>
 
-        <div className="summary-card total">
+        <div className="summary-card total with-tooltip">
           <div className="card-icon">
             <MemoryStick size={24} />
           </div>
@@ -36,9 +50,13 @@ export function SummaryCard({ result }: SummaryCardProps) {
             <span className="card-value">{formatNumber(result.total_ram)} GB</span>
             <span className="card-label">Total RAM</span>
           </div>
+          <SummaryTooltip
+            label="Total RAM"
+            formula="Σ (Service RAM × Scaled Pods) × 1.8 buffers"
+          />
         </div>
 
-        <div className="summary-card total">
+        <div className="summary-card total with-tooltip">
           <div className="card-icon">
             <Box size={24} />
           </div>
@@ -46,10 +64,14 @@ export function SummaryCard({ result }: SummaryCardProps) {
             <span className="card-value">{formatNumber(result.total_pods)}</span>
             <span className="card-label">Total Pods</span>
           </div>
+          <SummaryTooltip
+            label="Total Pods"
+            formula="Σ (Base Pods × Scale Factor)"
+          />
         </div>
 
         {showDuration && (
-          <div className="summary-card duration">
+          <div className="summary-card duration with-tooltip">
             <div className="card-icon">
               <Calendar size={24} />
             </div>
@@ -57,6 +79,10 @@ export function SummaryCard({ result }: SummaryCardProps) {
               <span className="card-value">{formatNumber(result.registration_duration_days)}</span>
               <span className="card-label">Working Days to Complete</span>
             </div>
+            <SummaryTooltip
+              label="Registration Duration"
+              formula="ceil(Total Population ÷ Daily Registrations)"
+            />
           </div>
         )}
       </div>

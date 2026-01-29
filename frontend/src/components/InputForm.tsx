@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calculator, Settings, Users, Monitor, Clock, TrendingUp, Percent, Layers } from 'lucide-react';
+import { Calculator, Settings, Users, Monitor, Clock, TrendingUp, Percent, Layers, Upload } from 'lucide-react';
 import type { CombinedInput, CalculatorMode, VersionInfo } from '../types';
 import { calculatorApi } from '../api/calculator';
 
@@ -15,6 +15,7 @@ const DEFAULT_VALUES: CombinedInput = {
   total_population: 100000000,
   num_registration_devices: 5000,
   registrations_per_device_per_day: 50,
+  peak_registrations_per_day: 250000, // 5000 devices * 50 registrations
   avg_auth_percentage: 0.1,
   upload_window_hours: 1,
   peak_day_multiplier: 1.2,
@@ -22,8 +23,27 @@ const DEFAULT_VALUES: CombinedInput = {
   mosip_version: DEFAULT_VERSION,
 };
 
+// Type for string-based input state (allows empty values while typing)
+type InputStrings = {
+  [K in keyof CombinedInput]: string;
+};
+
+// Convert numbers to strings for display
+const toInputStrings = (values: CombinedInput): InputStrings => ({
+  total_population: String(values.total_population),
+  num_registration_devices: String(values.num_registration_devices),
+  registrations_per_device_per_day: String(values.registrations_per_device_per_day),
+  peak_registrations_per_day: String(values.peak_registrations_per_day),
+  avg_auth_percentage: String(values.avg_auth_percentage * 100), // Display as percentage
+  upload_window_hours: String(values.upload_window_hours),
+  peak_day_multiplier: String(values.peak_day_multiplier),
+  peak_hour_percentage: String(values.peak_hour_percentage * 100), // Display as percentage
+  mosip_version: values.mosip_version,
+});
+
 export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
   const [values, setValues] = useState<CombinedInput>(DEFAULT_VALUES);
+  const [inputStrings, setInputStrings] = useState<InputStrings>(toInputStrings(DEFAULT_VALUES));
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [versions, setVersions] = useState<VersionInfo[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(true);
@@ -38,6 +58,7 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
         const defaultVersion = response.versions.find(v => v.is_default);
         if (defaultVersion) {
           setValues(prev => ({ ...prev, mosip_version: defaultVersion.version }));
+          setInputStrings(prev => ({ ...prev, mosip_version: defaultVersion.version }));
         }
       } catch (error) {
         console.error('Failed to fetch versions:', error);
@@ -53,18 +74,72 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
     fetchVersions();
   }, []);
 
-  const handleChange = (field: keyof CombinedInput, value: string) => {
-    const numValue = parseFloat(value) || 0;
-    setValues(prev => ({ ...prev, [field]: numValue }));
+  // Handle input change - update string value immediately for smooth typing
+  const handleInputChange = (field: keyof CombinedInput, value: string) => {
+    setInputStrings(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Handle input blur - convert to number and update actual values
+  const handleInputBlur = (field: keyof CombinedInput) => {
+    const stringValue = inputStrings[field];
+    let numValue = parseFloat(stringValue);
+
+    // Handle percentage fields
+    if (field === 'avg_auth_percentage' || field === 'peak_hour_percentage') {
+      numValue = isNaN(numValue) ? 0 : numValue / 100;
+    } else {
+      numValue = isNaN(numValue) ? 0 : numValue;
+    }
+
+    setValues(prev => {
+      const newValues = { ...prev, [field]: numValue };
+      // Auto-calculate registrations_per_device_per_day when peak or devices change
+      if (field === 'peak_registrations_per_day' || field === 'num_registration_devices') {
+        const peakReg = field === 'peak_registrations_per_day' ? numValue : prev.peak_registrations_per_day;
+        const devices = field === 'num_registration_devices' ? numValue : prev.num_registration_devices;
+        if (devices > 0) {
+          newValues.registrations_per_device_per_day = Math.round(peakReg / devices);
+        }
+      }
+      return newValues;
+    });
+
+    // Update display string (format nicely if needed)
+    if (field === 'avg_auth_percentage' || field === 'peak_hour_percentage') {
+      setInputStrings(prev => ({ ...prev, [field]: isNaN(parseFloat(stringValue)) ? '' : stringValue }));
+    } else {
+      setInputStrings(prev => ({ ...prev, [field]: isNaN(parseFloat(stringValue)) ? '' : stringValue }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onCalculate(values);
+    // Parse all string values to numbers before submit
+    const submitValues: CombinedInput = {
+      total_population: parseFloat(inputStrings.total_population) || 0,
+      num_registration_devices: parseFloat(inputStrings.num_registration_devices) || 0,
+      registrations_per_device_per_day: 0, // Will be calculated below
+      peak_registrations_per_day: parseFloat(inputStrings.peak_registrations_per_day) || 0,
+      avg_auth_percentage: (parseFloat(inputStrings.avg_auth_percentage) || 0) / 100,
+      upload_window_hours: parseFloat(inputStrings.upload_window_hours) || 1,
+      peak_day_multiplier: parseFloat(inputStrings.peak_day_multiplier) || 1.2,
+      peak_hour_percentage: (parseFloat(inputStrings.peak_hour_percentage) || 8) / 100,
+      mosip_version: inputStrings.mosip_version,
+    };
+
+    // Calculate registrations_per_device_per_day
+    if (submitValues.num_registration_devices > 0) {
+      submitValues.registrations_per_device_per_day = Math.round(
+        submitValues.peak_registrations_per_day / submitValues.num_registration_devices
+      );
+    }
+
+    onCalculate(submitValues);
   };
 
   const handleReset = () => {
     setValues(DEFAULT_VALUES);
+    setInputStrings(toInputStrings(DEFAULT_VALUES));
   };
 
   const isRegistration = mode === 'registration';
@@ -85,8 +160,11 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
           </label>
           <select
             id="mosip_version"
-            value={values.mosip_version}
-            onChange={(e) => setValues(prev => ({ ...prev, mosip_version: e.target.value }))}
+            value={inputStrings.mosip_version}
+            onChange={(e) => {
+              setValues(prev => ({ ...prev, mosip_version: e.target.value }));
+              setInputStrings(prev => ({ ...prev, mosip_version: e.target.value }));
+            }}
             disabled={versionsLoading}
             className="version-dropdown"
           >
@@ -122,11 +200,12 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
               </span>
             </label>
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               id="total_population"
-              value={values.total_population}
-              onChange={(e) => handleChange('total_population', e.target.value)}
-              min="1"
+              value={inputStrings.total_population}
+              onChange={(e) => handleInputChange('total_population', e.target.value)}
+              onBlur={() => handleInputBlur('total_population')}
               required
             />
           </div>
@@ -134,32 +213,35 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
           {isRegistration && (
             <>
               <div className="form-group">
+                <label htmlFor="peak_registrations_per_day">
+                  <Upload size={14} />
+                  Peak Registrations Per Day
+                  <span className="helper-text">Total daily registration target</span>
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  id="peak_registrations_per_day"
+                  value={inputStrings.peak_registrations_per_day}
+                  onChange={(e) => handleInputChange('peak_registrations_per_day', e.target.value)}
+                  onBlur={() => handleInputBlur('peak_registrations_per_day')}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
                 <label htmlFor="num_registration_devices">
                   <Monitor size={14} />
                   Number of Registration Devices
                   <span className="helper-text">Total registration kiosks/machines</span>
                 </label>
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="numeric"
                   id="num_registration_devices"
-                  value={values.num_registration_devices}
-                  onChange={(e) => handleChange('num_registration_devices', e.target.value)}
-                  min="1"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="registrations_per_device_per_day">
-                  Registrations per Device per Day
-                  <span className="helper-text">Expected daily throughput per device</span>
-                </label>
-                <input
-                  type="number"
-                  id="registrations_per_device_per_day"
-                  value={values.registrations_per_device_per_day}
-                  onChange={(e) => handleChange('registrations_per_device_per_day', e.target.value)}
-                  min="1"
+                  value={inputStrings.num_registration_devices}
+                  onChange={(e) => handleInputChange('num_registration_devices', e.target.value)}
+                  onBlur={() => handleInputBlur('num_registration_devices')}
                   required
                 />
               </div>
@@ -175,13 +257,12 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
               </label>
               <div className="input-with-suffix">
                 <input
-                  type="number"
+                  type="text"
+                  inputMode="decimal"
                   id="avg_auth_percentage"
-                  value={values.avg_auth_percentage * 100}
-                  onChange={(e) => handleChange('avg_auth_percentage', String(parseFloat(e.target.value) / 100))}
-                  min="0.1"
-                  max="100"
-                  step="0.1"
+                  value={inputStrings.avg_auth_percentage}
+                  onChange={(e) => handleInputChange('avg_auth_percentage', e.target.value)}
+                  onBlur={() => handleInputBlur('avg_auth_percentage')}
                   required
                 />
                 <span className="suffix">%</span>
@@ -213,13 +294,12 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
                     <span className="helper-text">Hours available for packet upload</span>
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     id="upload_window_hours"
-                    value={values.upload_window_hours}
-                    onChange={(e) => handleChange('upload_window_hours', e.target.value)}
-                    min="0.5"
-                    max="24"
-                    step="0.5"
+                    value={inputStrings.upload_window_hours}
+                    onChange={(e) => handleInputChange('upload_window_hours', e.target.value)}
+                    onBlur={() => handleInputBlur('upload_window_hours')}
                   />
                 </div>
 
@@ -230,13 +310,12 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
                     <span className="helper-text">Load multiplier for peak days</span>
                   </label>
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     id="peak_day_multiplier"
-                    value={values.peak_day_multiplier}
-                    onChange={(e) => handleChange('peak_day_multiplier', e.target.value)}
-                    min="1"
-                    max="3"
-                    step="0.1"
+                    value={inputStrings.peak_day_multiplier}
+                    onChange={(e) => handleInputChange('peak_day_multiplier', e.target.value)}
+                    onBlur={() => handleInputBlur('peak_day_multiplier')}
                   />
                 </div>
               </>
@@ -250,13 +329,12 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
                 </label>
                 <div className="input-with-suffix">
                   <input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     id="peak_hour_percentage"
-                    value={values.peak_hour_percentage * 100}
-                    onChange={(e) => handleChange('peak_hour_percentage', String(parseFloat(e.target.value) / 100))}
-                    min="1"
-                    max="50"
-                    step="1"
+                    value={inputStrings.peak_hour_percentage}
+                    onChange={(e) => handleInputChange('peak_hour_percentage', e.target.value)}
+                    onBlur={() => handleInputBlur('peak_hour_percentage')}
                   />
                   <span className="suffix">%</span>
                 </div>

@@ -8,6 +8,16 @@ interface ModuleDetailsProps {
   data: RegistrationOutput | AuthenticationOutput;
 }
 
+// Tooltip component for showing formulas
+function FormulaTooltip({ label, formula }: { label: string; formula: string }) {
+  return (
+    <div className="formula-tooltip">
+      <span className="formula-label">{label}</span>
+      <span className="formula-expression">{formula}</span>
+    </div>
+  );
+}
+
 function MetricsGrid({ data, moduleType }: { data: RegistrationOutput | AuthenticationOutput; moduleType: string }) {
   const formatNumber = (num: number) => new Intl.NumberFormat().format(num);
 
@@ -15,34 +25,75 @@ function MetricsGrid({ data, moduleType }: { data: RegistrationOutput | Authenti
   const regData = data as RegistrationOutput;
   const authData = data as AuthenticationOutput;
 
+  // Calculate registrations per device per day for display
+  const regPerDevice = isRegistration && regData.inputs.num_registration_devices > 0
+    ? Math.round(regData.daily_registrations / regData.inputs.num_registration_devices)
+    : 0;
+
   return (
     <div className="metrics-grid">
-      <div className="metric-item">
+      <div className="metric-item metric-with-formula">
         <span className="metric-label">
           {isRegistration ? 'Daily Registrations' : 'Daily Authentications'}
         </span>
         <span className="metric-value">
           {formatNumber(isRegistration ? regData.daily_registrations : authData.daily_authentications)}
         </span>
+        <FormulaTooltip
+          label={isRegistration ? 'Daily Registrations' : 'Daily Authentications'}
+          formula={isRegistration
+            ? 'Devices × Registrations per Device'
+            : 'Population × Auth Rate %'
+          }
+        />
       </div>
 
-      <div className="metric-item">
+      {isRegistration && (
+        <div className="metric-item metric-with-formula">
+          <span className="metric-label">Reg. per Device/Day</span>
+          <span className="metric-value">{formatNumber(regPerDevice)}</span>
+          <FormulaTooltip
+            label="Registrations per Device per Day"
+            formula="Daily Registrations ÷ Number of Devices"
+          />
+        </div>
+      )}
+
+      <div className="metric-item metric-with-formula">
         <span className="metric-label">
           {isRegistration ? 'Peak Daily Upload' : 'Peak Hour Auth'}
         </span>
         <span className="metric-value">
           {formatNumber(isRegistration ? regData.peak_daily_upload : authData.peak_hour_authentications)}
         </span>
+        <FormulaTooltip
+          label={isRegistration ? 'Peak Daily Upload' : 'Peak Hour Auth'}
+          formula={isRegistration
+            ? 'Daily Registrations × Peak Day Multiplier'
+            : 'Daily Auth × Peak Hour %'
+          }
+        />
       </div>
 
-      <div className="metric-item highlight">
+      <div className="metric-item highlight metric-with-formula">
         <span className="metric-label">Peak TPS</span>
         <span className="metric-value">{data.peak_tps.toFixed(2)}</span>
+        <FormulaTooltip
+          label="Peak TPS (Transactions Per Second)"
+          formula={isRegistration
+            ? 'ceil(Peak Daily Upload ÷ (Upload Hours × 3600))'
+            : 'ceil(Peak Hour Auth ÷ 3600)'
+          }
+        />
       </div>
 
-      <div className="metric-item">
+      <div className="metric-item metric-with-formula">
         <span className="metric-label">Scale Factor</span>
         <span className="metric-value">{data.scale_factor.toFixed(2)}x</span>
+        <FormulaTooltip
+          label="Scale Factor"
+          formula="max(1, ceil(Peak TPS ÷ Baseline TPS))"
+        />
       </div>
 
       <div className="metric-item">
@@ -51,9 +102,13 @@ function MetricsGrid({ data, moduleType }: { data: RegistrationOutput | Authenti
       </div>
 
       {isRegistration && (
-        <div className="metric-item">
+        <div className="metric-item metric-with-formula">
           <span className="metric-label">Duration (Days)</span>
           <span className="metric-value">{formatNumber(regData.duration_days)}</span>
+          <FormulaTooltip
+            label="Duration (Working Days)"
+            formula="ceil(Total Population ÷ Daily Registrations)"
+          />
         </div>
       )}
     </div>
