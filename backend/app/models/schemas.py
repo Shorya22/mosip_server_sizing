@@ -36,14 +36,12 @@ class RegistrationInput(BaseModel):
     upload_window_hours: float = Field(
         default=1.0,
         gt=0,
-        le=24,
         description="Number of hours in the upload window",
         examples=[1.0]
     )
     peak_day_multiplier: float = Field(
         default=1.2,
         gt=1.0,
-        le=3.0,
         description="Peak day multiplier for load calculation",
         examples=[1.2]
     )
@@ -118,14 +116,12 @@ class AuthenticationInput(BaseModel):
     avg_auth_percentage: float = Field(
         ...,
         gt=0,
-        le=1.0,
         description="Average authentication per day as percentage (0.1 = 10%)",
         examples=[0.1]
     )
     peak_hour_percentage: float = Field(
         default=0.08,
         gt=0,
-        le=1.0,
         description="Peak hour authentication as percentage of daily (0.08 = 8%)",
         examples=[0.08]
     )
@@ -182,7 +178,6 @@ class CombinedInput(BaseModel):
     avg_auth_percentage: float = Field(
         ...,
         gt=0,
-        le=1.0,
         description="Average authentication per day as percentage",
         examples=[0.1]
     )
