@@ -8,9 +8,6 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
 } from 'recharts';
 import { Server, Cpu, MemoryStick, Box, Calendar, Activity, Zap } from 'lucide-react';
 import type { CombinedOutput, ServiceResource } from '../types';
@@ -20,7 +17,6 @@ interface ReportProps {
   moduleType: 'registration' | 'authentication';
 }
 
-const COLORS = ['#1e40af', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe'];
 const CHART_COLORS = {
   vcpu: '#1e40af',
   ram: '#059669',
@@ -44,12 +40,6 @@ export const Report = forwardRef<HTMLDivElement, ReportProps>(({ result, moduleT
       RAM: s.total_ram,
       Pods: s.scaled_pods,
     }));
-
-  const resourceDistribution = [
-    { name: 'vCPU', value: moduleData.total_vcpu, color: CHART_COLORS.vcpu },
-    { name: 'RAM (GB)', value: moduleData.total_ram, color: CHART_COLORS.ram },
-    { name: 'Pods', value: moduleData.total_pods, color: CHART_COLORS.pods },
-  ];
 
   const bufferData = [
     { name: 'Base Resources', vcpu: moduleData.buffers.base_vcpu, ram: moduleData.buffers.base_ram },
@@ -231,7 +221,7 @@ export const Report = forwardRef<HTMLDivElement, ReportProps>(({ result, moduleT
                   borderRadius: '8px',
                   boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
                 }}
-                formatter={(value: number, name: string) => [value.toFixed(2), name]}
+                formatter={(value) => [typeof value === 'number' ? value.toFixed(2) : value, '']}
                 labelFormatter={(label) => servicesChartData.find(s => s.name === label)?.fullName || label}
               />
               <Legend />

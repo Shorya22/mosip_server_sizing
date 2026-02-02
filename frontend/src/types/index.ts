@@ -26,6 +26,9 @@ export interface CombinedInput {
   peak_day_multiplier: number;
   peak_hour_percentage: number;
   mosip_version: string;
+  // Multi-year projection settings
+  annual_growth_rate: number; // 0-0.5 (0-50%)
+  projection_years: number;   // 1-10
 }
 
 // =============================================================================
@@ -93,6 +96,30 @@ export interface SummaryRow {
   total_pods: number;
 }
 
+export interface YearlyProjection {
+  year: number;
+  population: number;
+  growth_factor: number;
+  // Registration metrics
+  daily_registrations: number;
+  registration_devices: number;
+  registration_duration_days: number;
+  peak_tps_registration: number;
+  registration_vcpu: number;
+  registration_ram: number;
+  registration_pods: number;
+  // Authentication metrics
+  daily_authentications: number;
+  peak_tps_authentication: number;
+  authentication_vcpu: number;
+  authentication_ram: number;
+  authentication_pods: number;
+  // Combined totals
+  total_vcpu: number;
+  total_ram: number;
+  total_pods: number;
+}
+
 export interface CombinedOutput {
   summary: SummaryRow[];
   total_vcpu: number;
@@ -102,6 +129,10 @@ export interface CombinedOutput {
   registration: RegistrationOutput;
   authentication: AuthenticationOutput;
   mosip_version: string;
+  // Multi-year projections
+  projections: YearlyProjection[];
+  annual_growth_rate: number;
+  projection_years: number;
 }
 
 // =============================================================================

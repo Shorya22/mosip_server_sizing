@@ -21,60 +21,8 @@ function App() {
     setError(null);
 
     try {
-      let calculationResult: CombinedOutput;
-
-      if (activeTab === 'registration') {
-        const regResult = await calculatorApi.calculateRegistration({
-          total_population: input.total_population,
-          num_registration_devices: input.num_registration_devices,
-          registrations_per_device_per_day: input.registrations_per_device_per_day,
-          upload_window_hours: input.upload_window_hours,
-          peak_day_multiplier: input.peak_day_multiplier,
-        }, input.mosip_version);
-        // Wrap in combined format for consistent display
-        calculationResult = {
-          summary: [{
-            module_name: 'Registrations Upload & SyncData',
-            avg_daily_load: regResult.daily_registrations,
-            peak_tps: regResult.peak_tps,
-            total_vcpu: regResult.total_vcpu,
-            total_ram: regResult.total_ram,
-            total_pods: regResult.total_pods,
-          }],
-          total_vcpu: regResult.total_vcpu,
-          total_ram: regResult.total_ram,
-          total_pods: regResult.total_pods,
-          registration_duration_days: regResult.duration_days,
-          registration: regResult,
-          authentication: null as unknown as CombinedOutput['authentication'],
-          mosip_version: input.mosip_version,
-        };
-      } else {
-        const authResult = await calculatorApi.calculateAuthentication({
-          total_population: input.total_population,
-          avg_auth_percentage: input.avg_auth_percentage,
-          peak_hour_percentage: input.peak_hour_percentage,
-        }, input.mosip_version);
-        // Wrap in combined format for consistent display
-        calculationResult = {
-          summary: [{
-            module_name: 'ID Authentication',
-            avg_daily_load: authResult.daily_authentications,
-            peak_tps: authResult.peak_tps,
-            total_vcpu: authResult.total_vcpu,
-            total_ram: authResult.total_ram,
-            total_pods: authResult.total_pods,
-          }],
-          total_vcpu: authResult.total_vcpu,
-          total_ram: authResult.total_ram,
-          total_pods: authResult.total_pods,
-          registration_duration_days: 0,
-          registration: null as unknown as CombinedOutput['registration'],
-          authentication: authResult,
-          mosip_version: input.mosip_version,
-        };
-      }
-
+      // Use combined endpoint to get both module calculations and projections
+      const calculationResult = await calculatorApi.calculateCombined(input);
       setResult(calculationResult);
     } catch (err) {
       console.error('Calculation error:', err);
@@ -114,7 +62,7 @@ function App() {
             </div>
 
             <div className="results-section">
-              <ResultsPanel result={result} />
+              <ResultsPanel result={result} moduleType={activeTab} />
             </div>
           </div>
         </div>

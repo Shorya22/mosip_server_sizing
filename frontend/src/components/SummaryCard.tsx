@@ -1,8 +1,17 @@
 import { Cpu, MemoryStick, Box, Calendar, Zap } from 'lucide-react';
-import type { CombinedOutput } from '../types';
+import type { CombinedOutput, CalculatorMode } from '../types';
+
+interface OverrideValues {
+  total_vcpu: number;
+  total_ram: number;
+  total_pods: number;
+  registration_duration_days?: number;
+}
 
 interface SummaryCardProps {
   result: CombinedOutput;
+  overrideValues?: OverrideValues;
+  moduleType: CalculatorMode;
 }
 
 // Tooltip component for showing formulas on summary cards
@@ -15,10 +24,35 @@ function SummaryTooltip({ label, formula }: { label: string; formula: string }) 
   );
 }
 
-export function SummaryCard({ result }: SummaryCardProps) {
+export function SummaryCard({ result, overrideValues, moduleType }: SummaryCardProps) {
   const formatNumber = (num: number) => new Intl.NumberFormat().format(num);
 
-  const showDuration = result.registration_duration_days > 0;
+  const isRegistration = moduleType === 'registration';
+
+  // Get module-specific base values
+  const moduleData = isRegistration ? result.registration : result.authentication;
+  const baseVcpu = moduleData?.total_vcpu ?? 0;
+  const baseRam = moduleData?.total_ram ?? 0;
+  const basePods = moduleData?.total_pods ?? 0;
+  const baseDuration = isRegistration ? result.registration_duration_days : 0;
+
+  // Use override values if provided (for projections), otherwise use module base values
+  const displayVcpu = overrideValues?.total_vcpu ?? baseVcpu;
+  const displayRam = overrideValues?.total_ram ?? baseRam;
+  const displayPods = overrideValues?.total_pods ?? basePods;
+  const displayDuration = overrideValues?.registration_duration_days ?? baseDuration;
+
+  // Show duration only for registration module
+  const showDuration = isRegistration && displayDuration > 0;
+
+  // Filter summary to show only the active module
+  const filteredSummary = result.summary.filter(row => {
+    if (isRegistration) {
+      return row.module_name.toLowerCase().includes('registration');
+    } else {
+      return row.module_name.toLowerCase().includes('authentication');
+    }
+  });
 
   return (
     <div className="summary-section">
@@ -33,7 +67,7 @@ export function SummaryCard({ result }: SummaryCardProps) {
             <Cpu size={24} />
           </div>
           <div className="card-content">
-            <span className="card-value">{formatNumber(result.total_vcpu)}</span>
+            <span className="card-value">{formatNumber(displayVcpu)}</span>
             <span className="card-label">Total vCPU</span>
           </div>
           <SummaryTooltip
@@ -47,7 +81,7 @@ export function SummaryCard({ result }: SummaryCardProps) {
             <MemoryStick size={24} />
           </div>
           <div className="card-content">
-            <span className="card-value">{formatNumber(result.total_ram)} GB</span>
+            <span className="card-value">{formatNumber(displayRam)} GB</span>
             <span className="card-label">Total RAM</span>
           </div>
           <SummaryTooltip
@@ -61,7 +95,7 @@ export function SummaryCard({ result }: SummaryCardProps) {
             <Box size={24} />
           </div>
           <div className="card-content">
-            <span className="card-value">{formatNumber(result.total_pods)}</span>
+            <span className="card-value">{formatNumber(displayPods)}</span>
             <span className="card-label">Total Pods</span>
           </div>
           <SummaryTooltip
@@ -76,7 +110,7 @@ export function SummaryCard({ result }: SummaryCardProps) {
               <Calendar size={24} />
             </div>
             <div className="card-content">
-              <span className="card-value">{formatNumber(result.registration_duration_days)}</span>
+              <span className="card-value">{formatNumber(displayDuration)}</span>
               <span className="card-label">Working Days to Complete</span>
             </div>
             <SummaryTooltip
@@ -100,26 +134,16 @@ export function SummaryCard({ result }: SummaryCardProps) {
             </tr>
           </thead>
           <tbody>
-            {result.summary.map((row) => (
+            {filteredSummary.map((row) => (
               <tr key={row.module_name}>
                 <td className="module-name">{row.module_name}</td>
                 <td>{formatNumber(row.avg_daily_load)}</td>
                 <td>{row.peak_tps.toFixed(2)}</td>
-                <td>{formatNumber(row.total_vcpu)}</td>
-                <td>{formatNumber(row.total_ram)}</td>
-                <td>{formatNumber(row.total_pods)}</td>
+                <td>{formatNumber(overrideValues?.total_vcpu ?? row.total_vcpu)}</td>
+                <td>{formatNumber(overrideValues?.total_ram ?? row.total_ram)}</td>
+                <td>{formatNumber(overrideValues?.total_pods ?? row.total_pods)}</td>
               </tr>
             ))}
-            {result.summary.length > 1 && (
-              <tr className="total-row">
-                <td>Total Resources</td>
-                <td>-</td>
-                <td>-</td>
-                <td><strong>{formatNumber(result.total_vcpu)}</strong></td>
-                <td><strong>{formatNumber(result.total_ram)}</strong></td>
-                <td><strong>{formatNumber(result.total_pods)}</strong></td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>

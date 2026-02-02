@@ -21,6 +21,7 @@ from app.models.schemas import (
     ServiceResource,
     BufferBreakdown,
     SummaryRow,
+    YearlyProjection,
 )
 
 
@@ -258,13 +259,123 @@ class ResourceCalculator:
             buffers=buffers,
         )
 
+    def calculate_yearly_projection(
+        self,
+        year: int,
+        base_population: int,
+        growth_rate: float,
+        num_registration_devices: int,
+        registrations_per_device_per_day: int,
+        upload_window_hours: float,
+        peak_day_multiplier: float,
+        avg_auth_percentage: float,
+        peak_hour_percentage: float,
+    ) -> YearlyProjection:
+        """
+        Calculate resources for a specific projection year.
+
+        Population grows by compound growth rate.
+        Registration devices stay FIXED (user's current infrastructure).
+
+        Key insight:
+        - Registration resources depend on THROUGHPUT (devices × registrations/device),
+          not population. Population only affects how long registration takes.
+        - Authentication resources depend on population × auth_rate.
+
+        Formula: Population Year N = Base Population × (1 + growth_rate)^(N-1)
+        """
+        # Calculate growth factor and projected population
+        growth_factor = (1 + growth_rate) ** (year - 1)
+        projected_population = int(base_population * growth_factor)
+
+        # Registration devices stay FIXED - user's current infrastructure
+        # This shows realistic resource needs without assuming infrastructure scaling
+        devices = num_registration_devices
+
+        # Calculate registration metrics
+        # Note: Resources depend on throughput (devices), duration depends on population
+        registration_input = RegistrationInput(
+            total_population=projected_population,
+            num_registration_devices=devices,
+            registrations_per_device_per_day=registrations_per_device_per_day,
+            upload_window_hours=upload_window_hours,
+            peak_day_multiplier=peak_day_multiplier,
+        )
+        reg_result = self.calculate_registration(registration_input)
+
+        # Calculate authentication metrics
+        # Authentication scales with population (more people = more authentications)
+        authentication_input = AuthenticationInput(
+            total_population=projected_population,
+            avg_auth_percentage=avg_auth_percentage,
+            peak_hour_percentage=peak_hour_percentage,
+        )
+        auth_result = self.calculate_authentication(authentication_input)
+
+        # Combined totals
+        total_vcpu = reg_result.total_vcpu + auth_result.total_vcpu
+        total_ram = reg_result.total_ram + auth_result.total_ram
+        total_pods = reg_result.total_pods + auth_result.total_pods
+
+        return YearlyProjection(
+            year=year,
+            population=projected_population,
+            growth_factor=round(growth_factor, 4),
+            # Registration metrics
+            daily_registrations=reg_result.daily_registrations,
+            registration_devices=devices,
+            registration_duration_days=reg_result.duration_days,
+            peak_tps_registration=reg_result.peak_tps,
+            registration_vcpu=reg_result.total_vcpu,
+            registration_ram=reg_result.total_ram,
+            registration_pods=reg_result.total_pods,
+            # Authentication metrics
+            daily_authentications=auth_result.daily_authentications,
+            peak_tps_authentication=auth_result.peak_tps,
+            authentication_vcpu=auth_result.total_vcpu,
+            authentication_ram=auth_result.total_ram,
+            authentication_pods=auth_result.total_pods,
+            # Combined totals
+            total_vcpu=total_vcpu,
+            total_ram=total_ram,
+            total_pods=total_pods,
+        )
+
+    def calculate_projections(
+        self,
+        input_data: CombinedInput,
+    ) -> List[YearlyProjection]:
+        """
+        Calculate multi-year resource projections based on annual growth rate.
+
+        Returns projections for each year from 1 to projection_years.
+        """
+        projections = []
+
+        for year in range(1, input_data.projection_years + 1):
+            projection = self.calculate_yearly_projection(
+                year=year,
+                base_population=input_data.total_population,
+                growth_rate=input_data.annual_growth_rate,
+                num_registration_devices=input_data.num_registration_devices,
+                registrations_per_device_per_day=input_data.registrations_per_device_per_day,
+                upload_window_hours=input_data.upload_window_hours,
+                peak_day_multiplier=input_data.peak_day_multiplier,
+                avg_auth_percentage=input_data.avg_auth_percentage,
+                peak_hour_percentage=input_data.peak_hour_percentage,
+            )
+            projections.append(projection)
+
+        return projections
+
     def calculate_combined(self, input_data: CombinedInput) -> CombinedOutput:
         """
         Calculate resources for both modules combined (Summary view).
 
         This replicates the Summary sheet from the Excel calculator.
+        Includes multi-year projections when growth rate > 0.
         """
-        # Build individual inputs
+        # Build individual inputs for Year 1 (base calculation)
         registration_input = RegistrationInput(
             total_population=input_data.total_population,
             num_registration_devices=input_data.num_registration_devices,
@@ -279,7 +390,7 @@ class ResourceCalculator:
             peak_hour_percentage=input_data.peak_hour_percentage,
         )
 
-        # Calculate both modules
+        # Calculate both modules for base year
         registration_result = self.calculate_registration(registration_input)
         authentication_result = self.calculate_authentication(authentication_input)
 
@@ -303,10 +414,13 @@ class ResourceCalculator:
             ),
         ]
 
-        # Calculate totals
+        # Calculate totals for base year
         total_vcpu = registration_result.total_vcpu + authentication_result.total_vcpu
         total_ram = registration_result.total_ram + authentication_result.total_ram
         total_pods = registration_result.total_pods + authentication_result.total_pods
+
+        # Calculate multi-year projections
+        projections = self.calculate_projections(input_data)
 
         return CombinedOutput(
             summary=summary,
@@ -317,6 +431,9 @@ class ResourceCalculator:
             registration=registration_result,
             authentication=authentication_result,
             mosip_version=self.version,
+            projections=projections,
+            annual_growth_rate=input_data.annual_growth_rate,
+            projection_years=input_data.projection_years,
         )
 
 

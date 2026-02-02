@@ -194,6 +194,22 @@ class CombinedInput(BaseModel):
         examples=["1.3.0", "1.4.0"]
     )
 
+    # Multi-year projection settings
+    annual_growth_rate: float = Field(
+        default=0.0,
+        ge=0,
+        le=0.5,
+        description="Annual population growth rate (0.05 = 5%)",
+        examples=[0.05]
+    )
+    projection_years: int = Field(
+        default=1,
+        ge=1,
+        le=10,
+        description="Number of years to project (1-10)",
+        examples=[5]
+    )
+
 
 class SummaryRow(BaseModel):
     """Summary row for a module"""
@@ -204,6 +220,35 @@ class SummaryRow(BaseModel):
     total_vcpu: int
     total_ram: int
     total_pods: int
+
+
+class YearlyProjection(BaseModel):
+    """Resource projection for a specific year"""
+
+    year: int = Field(..., description="Projection year (1 = current year)")
+    population: int = Field(..., description="Projected population for this year")
+    growth_factor: float = Field(..., description="Cumulative growth factor (1.0 for year 1)")
+
+    # Registration metrics
+    daily_registrations: int = Field(..., description="Daily registrations for projected population")
+    registration_devices: int = Field(..., description="Registration devices (scaled with population)")
+    registration_duration_days: int = Field(..., description="Working days to complete registration")
+    peak_tps_registration: float = Field(..., description="Peak TPS for registration")
+    registration_vcpu: int = Field(..., description="vCPU required for registration")
+    registration_ram: int = Field(..., description="RAM (GB) required for registration")
+    registration_pods: int = Field(..., description="Pods required for registration")
+
+    # Authentication metrics
+    daily_authentications: int = Field(..., description="Daily authentications for projected population")
+    peak_tps_authentication: float = Field(..., description="Peak TPS for authentication")
+    authentication_vcpu: int = Field(..., description="vCPU required for authentication")
+    authentication_ram: int = Field(..., description="RAM (GB) required for authentication")
+    authentication_pods: int = Field(..., description="Pods required for authentication")
+
+    # Combined resource totals (for reference)
+    total_vcpu: int = Field(..., description="Total vCPU required (both modules)")
+    total_ram: int = Field(..., description="Total RAM (GB) required (both modules)")
+    total_pods: int = Field(..., description="Total pods required (both modules)")
 
 
 class CombinedOutput(BaseModel):
@@ -224,6 +269,20 @@ class CombinedOutput(BaseModel):
 
     # Version info
     mosip_version: str = "1.3.0"
+
+    # Multi-year projections
+    projections: List[YearlyProjection] = Field(
+        default=[],
+        description="Resource projections for multiple years based on growth rate"
+    )
+    annual_growth_rate: float = Field(
+        default=0.0,
+        description="Annual population growth rate used for projections"
+    )
+    projection_years: int = Field(
+        default=1,
+        description="Number of projection years"
+    )
 
 
 # =============================================================================

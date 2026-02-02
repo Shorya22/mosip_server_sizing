@@ -21,6 +21,8 @@ const DEFAULT_VALUES: CombinedInput = {
   peak_day_multiplier: 1.2,
   peak_hour_percentage: 0.08,
   mosip_version: DEFAULT_VERSION,
+  annual_growth_rate: 0,
+  projection_years: 10, // Always calculate 10 years for projection selector
 };
 
 // Type for string-based input state (allows empty values while typing)
@@ -39,6 +41,8 @@ const toInputStrings = (values: CombinedInput): InputStrings => ({
   peak_day_multiplier: String(values.peak_day_multiplier),
   peak_hour_percentage: String(values.peak_hour_percentage * 100), // Display as percentage
   mosip_version: values.mosip_version,
+  annual_growth_rate: String(values.annual_growth_rate * 100), // Display as percentage
+  projection_years: String(values.projection_years),
 });
 
 export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
@@ -85,7 +89,7 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
     let numValue = parseFloat(stringValue);
 
     // Handle percentage fields
-    if (field === 'avg_auth_percentage' || field === 'peak_hour_percentage') {
+    if (field === 'avg_auth_percentage' || field === 'peak_hour_percentage' || field === 'annual_growth_rate') {
       numValue = isNaN(numValue) ? 0 : numValue / 100;
     } else {
       numValue = isNaN(numValue) ? 0 : numValue;
@@ -125,6 +129,8 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
       peak_day_multiplier: parseFloat(inputStrings.peak_day_multiplier) || 1.2,
       peak_hour_percentage: (parseFloat(inputStrings.peak_hour_percentage) || 8) / 100,
       mosip_version: inputStrings.mosip_version,
+      annual_growth_rate: (parseFloat(inputStrings.annual_growth_rate) || 0) / 100,
+      projection_years: 10, // Always calculate 10 years for projection options
     };
 
     // Calculate registrations_per_device_per_day
@@ -340,6 +346,27 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
                 </div>
               </div>
             )}
+
+            {/* Annual Growth Rate - shown for both modes */}
+            <div className="form-group">
+              <label htmlFor="annual_growth_rate">
+                <TrendingUp size={14} />
+                Annual Population Growth Rate (%)
+                <span className="helper-text">Projected yearly population growth for multi-year planning</span>
+              </label>
+              <div className="input-with-suffix">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  id="annual_growth_rate"
+                  value={inputStrings.annual_growth_rate}
+                  onChange={(e) => handleInputChange('annual_growth_rate', e.target.value)}
+                  onBlur={() => handleInputBlur('annual_growth_rate')}
+                  placeholder="0"
+                />
+                <span className="suffix">%</span>
+              </div>
+            </div>
           </div>
         )}
       </div>

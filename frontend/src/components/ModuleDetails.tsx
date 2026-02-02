@@ -116,8 +116,6 @@ function MetricsGrid({ data, moduleType }: { data: RegistrationOutput | Authenti
 }
 
 function ServicesTable({ services }: { services: ServiceResource[] }) {
-  const formatNumber = (num: number) => new Intl.NumberFormat().format(num);
-
   return (
     <div className="services-table-container">
       <table className="services-table">
