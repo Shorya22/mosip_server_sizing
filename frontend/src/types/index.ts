@@ -58,6 +58,14 @@ export interface BufferBreakdown {
   system_buffer_ram: number;
 }
 
+export interface StorageBreakdown {
+  postgres_identity_gb: number;
+  postgres_auth_gb: number;
+  postgres_total_gb: number;
+  logs_uins_issued_gb: number;
+  logs_daily_auths_gb: number;
+}
+
 export interface RegistrationOutput {
   inputs: RegistrationInput;
   daily_registrations: number;
@@ -83,6 +91,7 @@ export interface AuthenticationOutput {
   total_vcpu: number;
   total_ram: number;
   total_pods: number;
+  storage?: StorageBreakdown;
   services: ServiceResource[];
   buffers: BufferBreakdown;
 }
@@ -114,6 +123,10 @@ export interface YearlyProjection {
   authentication_vcpu: number;
   authentication_ram: number;
   authentication_pods: number;
+  // Storage metrics (for authentication)
+  postgres_db_gb: number;
+  logs_uins_issued_gb: number;
+  logs_daily_auths_gb: number;
   // Combined totals
   total_vcpu: number;
   total_ram: number;
@@ -126,6 +139,7 @@ export interface CombinedOutput {
   total_ram: number;
   total_pods: number;
   registration_duration_days: number;
+  storage?: StorageBreakdown;
   registration: RegistrationOutput;
   authentication: AuthenticationOutput;
   mosip_version: string;

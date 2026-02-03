@@ -72,7 +72,7 @@ function App() {
         <div className="container">
           <p>MOSIP Resource Calculator | Supports Multiple Platform Versions</p>
           <p className="disclaimer">
-            Note: Storage requirements are not included. Excludes Pre-Registration, KYC with OTP, and post-upload processing.
+            Note: Storage calculations included for ID Authentication. Excludes Pre-Registration, KYC with OTP, and post-upload processing.
           </p>
         </div>
       </footer>

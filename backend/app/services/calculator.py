@@ -22,7 +22,21 @@ from app.models.schemas import (
     BufferBreakdown,
     SummaryRow,
     YearlyProjection,
+    StorageBreakdown,
 )
+
+
+# =============================================================================
+# STORAGE CALCULATION CONSTANTS (from IDA Resource Calculator Excel)
+# =============================================================================
+
+# Postgres DB storage constants
+POSTGRES_MB_PER_UIN = 0.1  # 0.1 MB per UIN (identity issuances)
+POSTGRES_GB_PER_100K_AUTHS = 1.3  # 1.3 GB per 100,000 authentications
+
+# Elasticsearch logs storage constants
+LOGS_GB_PER_10K_UINS = 3.5  # 3.5 GB per 10,000 UINs issued
+LOGS_GB_PER_10K_AUTHS = 1.3  # 1.3 GB per 10,000 authentications (per day)
 
 
 class ResourceCalculator:
@@ -49,6 +63,51 @@ class ResourceCalculator:
     def _get_authentication_config(self) -> dict:
         """Get authentication module configuration for the current version."""
         return self.config["authentication"]
+
+    @staticmethod
+    def _calculate_storage(
+        total_population: int,
+        daily_authentications: int
+    ) -> StorageBreakdown:
+        """
+        Calculate storage requirements based on IDA Resource Calculator Excel.
+
+        Formulas from Excel:
+        - Postgres DB = (0.1 × UINs / 1000) + (1.3 × daily_auths / 100000) GB
+        - Logs UINs = 3.5 × UINs / 10000 GB
+        - Logs Daily Auths = 1.3 × daily_auths / 10000 GB/day
+
+        Args:
+            total_population: Total number of UINs issued (population)
+            daily_authentications: Daily authentication count
+
+        Returns:
+            StorageBreakdown with all storage calculations
+        """
+        # Postgres DB storage
+        # Identity issuances: 0.1 MB/UIN converted to GB (divide by 1000)
+        postgres_identity_gb = (POSTGRES_MB_PER_UIN * total_population) / 1000
+
+        # Authentications: 1.3 GB per 100,000 auths
+        postgres_auth_gb = (POSTGRES_GB_PER_100K_AUTHS * daily_authentications) / 100000
+
+        # Total Postgres storage
+        postgres_total_gb = postgres_identity_gb + postgres_auth_gb
+
+        # Elasticsearch logs storage
+        # UINs issued: 3.5 GB per 10,000 UINs
+        logs_uins_issued_gb = (LOGS_GB_PER_10K_UINS * total_population) / 10000
+
+        # Daily auths: 1.3 GB per 10,000 auths (per day)
+        logs_daily_auths_gb = (LOGS_GB_PER_10K_AUTHS * daily_authentications) / 10000
+
+        return StorageBreakdown(
+            postgres_identity_gb=round(postgres_identity_gb, 2),
+            postgres_auth_gb=round(postgres_auth_gb, 2),
+            postgres_total_gb=round(postgres_total_gb, 2),
+            logs_uins_issued_gb=round(logs_uins_issued_gb, 2),
+            logs_daily_auths_gb=round(logs_daily_auths_gb, 2),
+        )
 
     def _calculate_buffers(self, base_vcpu: float, base_ram: float) -> Tuple[BufferBreakdown, float, float]:
         """
@@ -245,6 +304,12 @@ class ResourceCalculator:
         # Step 6: Apply buffers
         buffers, total_vcpu, total_ram = self._calculate_buffers(base_vcpu, base_ram)
 
+        # Step 7: Calculate storage requirements
+        storage = self._calculate_storage(
+            total_population=input_data.total_population,
+            daily_authentications=daily_authentications
+        )
+
         return AuthenticationOutput(
             inputs=input_data,
             daily_authentications=daily_authentications,
@@ -255,6 +320,7 @@ class ResourceCalculator:
             total_vcpu=math.ceil(total_vcpu),
             total_ram=math.ceil(total_ram),
             total_pods=total_pods,
+            storage=storage,
             services=service_resources,
             buffers=buffers,
         )
@@ -317,6 +383,9 @@ class ResourceCalculator:
         total_ram = reg_result.total_ram + auth_result.total_ram
         total_pods = reg_result.total_pods + auth_result.total_pods
 
+        # Get storage from authentication result
+        storage = auth_result.storage
+
         return YearlyProjection(
             year=year,
             population=projected_population,
@@ -335,6 +404,10 @@ class ResourceCalculator:
             authentication_vcpu=auth_result.total_vcpu,
             authentication_ram=auth_result.total_ram,
             authentication_pods=auth_result.total_pods,
+            # Storage metrics
+            postgres_db_gb=storage.postgres_total_gb if storage else 0.0,
+            logs_uins_issued_gb=storage.logs_uins_issued_gb if storage else 0.0,
+            logs_daily_auths_gb=storage.logs_daily_auths_gb if storage else 0.0,
             # Combined totals
             total_vcpu=total_vcpu,
             total_ram=total_ram,
@@ -428,6 +501,7 @@ class ResourceCalculator:
             total_ram=total_ram,
             total_pods=total_pods,
             registration_duration_days=registration_result.duration_days,
+            storage=authentication_result.storage,
             registration=registration_result,
             authentication=authentication_result,
             mosip_version=self.version,

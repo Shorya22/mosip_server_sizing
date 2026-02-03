@@ -127,6 +127,34 @@ class AuthenticationInput(BaseModel):
     )
 
 
+class StorageBreakdown(BaseModel):
+    """Storage calculation breakdown based on IDA Resource Calculator Excel"""
+
+    # Postgres DB storage
+    postgres_identity_gb: float = Field(
+        ...,
+        description="Postgres storage for identity issuances (GB)"
+    )
+    postgres_auth_gb: float = Field(
+        ...,
+        description="Postgres storage for authentications (GB)"
+    )
+    postgres_total_gb: float = Field(
+        ...,
+        description="Total Postgres DB storage (GB)"
+    )
+
+    # Elasticsearch logs storage
+    logs_uins_issued_gb: float = Field(
+        ...,
+        description="Elasticsearch logs for UINs issued (GB)"
+    )
+    logs_daily_auths_gb: float = Field(
+        ...,
+        description="Elasticsearch logs for daily auths (GB/day)"
+    )
+
+
 class AuthenticationOutput(BaseModel):
     """Output results for ID Authentication module calculation"""
 
@@ -144,6 +172,12 @@ class AuthenticationOutput(BaseModel):
     total_vcpu: int = Field(..., description="Total vCPU required (rounded)")
     total_ram: int = Field(..., description="Total RAM (GB) required (rounded)")
     total_pods: int = Field(..., description="Total pods required")
+
+    # Storage breakdown
+    storage: Optional[StorageBreakdown] = Field(
+        default=None,
+        description="Storage calculation breakdown"
+    )
 
     # Detailed breakdown
     services: List[ServiceResource] = Field(..., description="Per-service resource breakdown")
@@ -245,6 +279,11 @@ class YearlyProjection(BaseModel):
     authentication_ram: int = Field(..., description="RAM (GB) required for authentication")
     authentication_pods: int = Field(..., description="Pods required for authentication")
 
+    # Storage metrics (for authentication)
+    postgres_db_gb: float = Field(..., description="Postgres DB storage (GB)")
+    logs_uins_issued_gb: float = Field(..., description="Elasticsearch logs for UINs issued (GB)")
+    logs_daily_auths_gb: float = Field(..., description="Elasticsearch logs for daily auths (GB/day)")
+
     # Combined resource totals (for reference)
     total_vcpu: int = Field(..., description="Total vCPU required (both modules)")
     total_ram: int = Field(..., description="Total RAM (GB) required (both modules)")
@@ -262,6 +301,12 @@ class CombinedOutput(BaseModel):
 
     # Duration
     registration_duration_days: int
+
+    # Storage totals (from authentication module)
+    storage: Optional[StorageBreakdown] = Field(
+        default=None,
+        description="Storage calculation breakdown"
+    )
 
     # Detailed results
     registration: RegistrationOutput
