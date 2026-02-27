@@ -37,5 +37,3 @@ build/
 # Temp files
 ~$*
 
-*.xls
-*.xlsx
