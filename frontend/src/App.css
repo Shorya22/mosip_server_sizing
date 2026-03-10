@@ -341,6 +341,17 @@ body {
   padding-top: 16px;
 }
 
+.buffer-settings {
+  padding-top: 16px;
+}
+
+.toggle-hint {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+  opacity: 0.7;
+}
+
 /* Form Actions */
 .form-actions {
   display: flex;

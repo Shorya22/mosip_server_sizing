@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calculator, Settings, Users, Monitor, Clock, TrendingUp, Percent, Layers, Upload } from 'lucide-react';
+import { Calculator, Settings, Users, Monitor, Clock, TrendingUp, Percent, Layers, Upload, Shield } from 'lucide-react';
 import type { CombinedInput, CalculatorMode, VersionInfo } from '../types';
 import { calculatorApi } from '../api/calculator';
 
@@ -23,6 +23,9 @@ const DEFAULT_VALUES: CombinedInput = {
   mosip_version: DEFAULT_VERSION,
   annual_growth_rate: 0,
   projection_years: 10,
+  buffer_monitoring_logging: null,
+  buffer_kubernetes_infra: null,
+  buffer_system: null,
 };
 
 // Type for string-based input state (allows empty values while typing)
@@ -43,12 +46,16 @@ const toInputStrings = (values: CombinedInput): InputStrings => ({
   mosip_version: values.mosip_version,
   annual_growth_rate: String(values.annual_growth_rate * 100), // Display as percentage
   projection_years: String(values.projection_years),
+  buffer_monitoring_logging: values.buffer_monitoring_logging !== null ? String(values.buffer_monitoring_logging * 100) : '',
+  buffer_kubernetes_infra: values.buffer_kubernetes_infra !== null ? String(values.buffer_kubernetes_infra * 100) : '',
+  buffer_system: values.buffer_system !== null ? String(values.buffer_system * 100) : '',
 });
 
 export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
   const [values, setValues] = useState<CombinedInput>(DEFAULT_VALUES);
   const [inputStrings, setInputStrings] = useState<InputStrings>(toInputStrings(DEFAULT_VALUES));
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showBufferSettings, setShowBufferSettings] = useState(false);
   const [customYearsMode, setCustomYearsMode] = useState(false);
   const [versions, setVersions] = useState<VersionInfo[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(true);
@@ -132,6 +139,9 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
       mosip_version: inputStrings.mosip_version,
       annual_growth_rate: (parseFloat(inputStrings.annual_growth_rate) || 0) / 100,
       projection_years: parseInt(inputStrings.projection_years) || 10,
+      buffer_monitoring_logging: inputStrings.buffer_monitoring_logging !== '' ? (parseFloat(inputStrings.buffer_monitoring_logging) || 0) / 100 : null,
+      buffer_kubernetes_infra: inputStrings.buffer_kubernetes_infra !== '' ? (parseFloat(inputStrings.buffer_kubernetes_infra) || 0) / 100 : null,
+      buffer_system: inputStrings.buffer_system !== '' ? (parseFloat(inputStrings.buffer_system) || 0) / 100 : null,
     };
 
     // Calculate registrations_per_device_per_day
@@ -148,6 +158,7 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
     setValues(DEFAULT_VALUES);
     setInputStrings(toInputStrings(DEFAULT_VALUES));
     setCustomYearsMode(false);
+    setShowBufferSettings(false);
   };
 
   const isRegistration = mode === 'registration';
@@ -443,6 +454,89 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
                     </button>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="form-section collapsible">
+        <button
+          type="button"
+          className="section-toggle"
+          onClick={() => setShowBufferSettings(!showBufferSettings)}
+        >
+          <Shield size={18} />
+          <span>Buffer Allocation</span>
+          <span className="toggle-hint">Default: 20% / 30% / 30%</span>
+          <span className={`toggle-icon ${showBufferSettings ? 'open' : ''}`}>▼</span>
+        </button>
+
+        {showBufferSettings && (
+          <div className="form-grid buffer-settings">
+            <div className="form-group">
+              <label htmlFor="buffer_monitoring_logging">
+                <Monitor size={14} />
+                Monitoring & Logging (%)
+                <span className="helper-text">Percentage of base resources for monitoring, logging and alerts</span>
+              </label>
+              <div className="input-with-suffix">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  id="buffer_monitoring_logging"
+                  value={inputStrings.buffer_monitoring_logging}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setInputStrings(prev => ({ ...prev, buffer_monitoring_logging: val }));
+                  }}
+                  placeholder="20"
+                />
+                <span className="suffix">%</span>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="buffer_kubernetes_infra">
+                <Layers size={14} />
+                Kubernetes Infra (%)
+                <span className="helper-text">Percentage of (Base + Monitoring) for K8s infrastructure</span>
+              </label>
+              <div className="input-with-suffix">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  id="buffer_kubernetes_infra"
+                  value={inputStrings.buffer_kubernetes_infra}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setInputStrings(prev => ({ ...prev, buffer_kubernetes_infra: val }));
+                  }}
+                  placeholder="30"
+                />
+                <span className="suffix">%</span>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="buffer_system">
+                <Shield size={14} />
+                System Buffer (%)
+                <span className="helper-text">Percentage of K8s Infra for system buffer overhead</span>
+              </label>
+              <div className="input-with-suffix">
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  id="buffer_system"
+                  value={inputStrings.buffer_system}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setInputStrings(prev => ({ ...prev, buffer_system: val }));
+                  }}
+                  placeholder="30"
+                />
+                <span className="suffix">%</span>
               </div>
             </div>
           </div>

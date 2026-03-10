@@ -303,7 +303,7 @@ export function ResultsPanel({ result, moduleType }: ResultsPanelProps) {
             <li>Storage calculations based on IDA Resource Calculator: Postgres DB for identity & auth, Elasticsearch for logs</li>
           )}
           <li>Calculations exclude Pre-Registration, KYC with OTP, and post-upload packet processing</li>
-          <li>Buffer allocations include: Monitoring & Logging (20%), Kubernetes Infrastructure (30%), System Buffer (30%)</li>
+          <li>Buffer allocations include: Monitoring & Logging ({(result.registration.buffers.monitoring_logging_pct * 100).toFixed(0)}%), Kubernetes Infrastructure ({(result.registration.buffers.kubernetes_infra_pct * 100).toFixed(0)}%), System Buffer ({(result.registration.buffers.system_buffer_pct * 100).toFixed(0)}%)</li>
           <li>Peak TPS calculations assume external systems (ABIS) have maximum 300ms response times</li>
           {hasProjections && (
             <li>Multi-year projections assume population grows at {(result.annual_growth_rate * 100).toFixed(1)}% annually with proportionally scaled infrastructure</li>

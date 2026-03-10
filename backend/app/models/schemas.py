@@ -66,12 +66,15 @@ class BufferBreakdown(BaseModel):
 
     base_vcpu: float = Field(..., description="Base vCPU before buffers")
     base_ram: float = Field(..., description="Base RAM before buffers")
-    monitoring_logging_vcpu: float = Field(..., description="vCPU for monitoring/logging (20%)")
-    monitoring_logging_ram: float = Field(..., description="RAM for monitoring/logging (20%)")
-    kubernetes_infra_vcpu: float = Field(..., description="vCPU for K8s infra (30%)")
-    kubernetes_infra_ram: float = Field(..., description="RAM for K8s infra (30%)")
-    system_buffer_vcpu: float = Field(..., description="System buffer vCPU (30%)")
-    system_buffer_ram: float = Field(..., description="System buffer RAM (30%)")
+    monitoring_logging_pct: float = Field(..., description="Monitoring/logging percentage used")
+    monitoring_logging_vcpu: float = Field(..., description="vCPU for monitoring/logging")
+    monitoring_logging_ram: float = Field(..., description="RAM for monitoring/logging")
+    kubernetes_infra_pct: float = Field(..., description="Kubernetes infra percentage used")
+    kubernetes_infra_vcpu: float = Field(..., description="vCPU for K8s infra")
+    kubernetes_infra_ram: float = Field(..., description="RAM for K8s infra")
+    system_buffer_pct: float = Field(..., description="System buffer percentage used")
+    system_buffer_vcpu: float = Field(..., description="System buffer vCPU")
+    system_buffer_ram: float = Field(..., description="System buffer RAM")
 
 
 class RegistrationOutput(BaseModel):
@@ -241,6 +244,29 @@ class CombinedInput(BaseModel):
         ge=1,
         description="Number of years to project",
         examples=[5, 10, 20, 50]
+    )
+
+    # Buffer percentages (optional overrides, None = use version defaults)
+    buffer_monitoring_logging: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=1.0,
+        description="Monitoring & Logging buffer percentage (0.20 = 20%). None = use version default.",
+        examples=[0.20]
+    )
+    buffer_kubernetes_infra: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=1.0,
+        description="Kubernetes Infra buffer percentage (0.30 = 30%). None = use version default.",
+        examples=[0.30]
+    )
+    buffer_system: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=1.0,
+        description="System buffer percentage (0.30 = 30%). None = use version default.",
+        examples=[0.30]
     )
 
 

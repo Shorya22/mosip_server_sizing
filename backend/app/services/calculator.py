@@ -47,14 +47,18 @@ class ResourceCalculator:
     Supports multiple MOSIP versions.
     """
 
-    def __init__(self, version: str = DEFAULT_VERSION):
-        """Initialize calculator with a specific MOSIP version."""
+    def __init__(self, version: str = DEFAULT_VERSION, buffer_overrides: Optional[dict] = None):
+        """Initialize calculator with a specific MOSIP version and optional buffer overrides."""
         self.version = version
         self.config = get_version_config(version)
+        self.buffer_overrides = buffer_overrides
 
     def _get_buffer_config(self) -> dict:
-        """Get buffer configuration for the current version."""
-        return self.config["buffers"]
+        """Get buffer configuration for the current version, with any overrides applied."""
+        config = dict(self.config["buffers"])
+        if self.buffer_overrides:
+            config.update(self.buffer_overrides)
+        return config
 
     def _get_registration_config(self) -> dict:
         """Get registration module configuration for the current version."""
@@ -114,26 +118,30 @@ class ResourceCalculator:
         Calculate buffer resources based on Excel formula.
 
         Excel logic:
-        A - Monitoring, Logging and alerts (20% of Total Resources)
-        B - Kubernetes infra (30% of (Base + A))
-        C - Buffer in the system (30% of B)
+        A - Monitoring, Logging and alerts (% of Total Resources)
+        B - Kubernetes infra (% of (Base + A))
+        C - Buffer in the system (% of B)
 
         Returns:
             Tuple of (BufferBreakdown, total_vcpu, total_ram)
         """
         buffer_config = self._get_buffer_config()
 
-        # A - Monitoring, Logging, Alerts (20% of base)
-        monitoring_vcpu = base_vcpu * buffer_config["monitoring_logging"]
-        monitoring_ram = base_ram * buffer_config["monitoring_logging"]
+        monitoring_pct = buffer_config["monitoring_logging"]
+        k8s_pct = buffer_config["kubernetes_infra"]
+        system_pct = buffer_config["system_buffer"]
 
-        # B - Kubernetes infra (30% of (base + A))
-        k8s_vcpu = (base_vcpu + monitoring_vcpu) * buffer_config["kubernetes_infra"]
-        k8s_ram = (base_ram + monitoring_ram) * buffer_config["kubernetes_infra"]
+        # A - Monitoring, Logging, Alerts (% of base)
+        monitoring_vcpu = base_vcpu * monitoring_pct
+        monitoring_ram = base_ram * monitoring_pct
 
-        # C - System buffer (30% of B)
-        system_vcpu = k8s_vcpu * buffer_config["system_buffer"]
-        system_ram = k8s_ram * buffer_config["system_buffer"]
+        # B - Kubernetes infra (% of (base + A))
+        k8s_vcpu = (base_vcpu + monitoring_vcpu) * k8s_pct
+        k8s_ram = (base_ram + monitoring_ram) * k8s_pct
+
+        # C - System buffer (% of B)
+        system_vcpu = k8s_vcpu * system_pct
+        system_ram = k8s_ram * system_pct
 
         # Total
         total_vcpu = base_vcpu + monitoring_vcpu + k8s_vcpu + system_vcpu
@@ -142,10 +150,13 @@ class ResourceCalculator:
         breakdown = BufferBreakdown(
             base_vcpu=round(base_vcpu, 2),
             base_ram=round(base_ram, 2),
+            monitoring_logging_pct=monitoring_pct,
             monitoring_logging_vcpu=round(monitoring_vcpu, 2),
             monitoring_logging_ram=round(monitoring_ram, 2),
+            kubernetes_infra_pct=k8s_pct,
             kubernetes_infra_vcpu=round(k8s_vcpu, 2),
             kubernetes_infra_ram=round(k8s_ram, 2),
+            system_buffer_pct=system_pct,
             system_buffer_vcpu=round(system_vcpu, 2),
             system_buffer_ram=round(system_ram, 2),
         )
@@ -511,9 +522,9 @@ class ResourceCalculator:
         )
 
 
-def get_calculator(version: Optional[str] = None) -> ResourceCalculator:
+def get_calculator(version: Optional[str] = None, buffer_overrides: Optional[dict] = None) -> ResourceCalculator:
     """Factory function to get a calculator instance for a specific version."""
-    return ResourceCalculator(version or DEFAULT_VERSION)
+    return ResourceCalculator(version or DEFAULT_VERSION, buffer_overrides=buffer_overrides)
 
 
 # Default calculator instance for backward compatibility

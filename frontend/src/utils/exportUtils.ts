@@ -244,9 +244,9 @@ export function exportToPDF(
 
   const bufferItems = [
     { label: 'Base Resources', vcpu: moduleData.buffers.base_vcpu.toFixed(1), ram: moduleData.buffers.base_ram.toFixed(1), prefix: '' },
-    { label: 'Monitoring & Logging (20%)', vcpu: moduleData.buffers.monitoring_logging_vcpu.toFixed(2), ram: moduleData.buffers.monitoring_logging_ram.toFixed(1), prefix: '+' },
-    { label: 'Kubernetes Infra (30%)', vcpu: moduleData.buffers.kubernetes_infra_vcpu.toFixed(2), ram: moduleData.buffers.kubernetes_infra_ram.toFixed(2), prefix: '+' },
-    { label: 'System Buffer (30%)', vcpu: moduleData.buffers.system_buffer_vcpu.toFixed(2), ram: moduleData.buffers.system_buffer_ram.toFixed(2), prefix: '+' },
+    { label: `Monitoring & Logging (${(moduleData.buffers.monitoring_logging_pct * 100).toFixed(0)}%)`, vcpu: moduleData.buffers.monitoring_logging_vcpu.toFixed(2), ram: moduleData.buffers.monitoring_logging_ram.toFixed(1), prefix: '+' },
+    { label: `Kubernetes Infra (${(moduleData.buffers.kubernetes_infra_pct * 100).toFixed(0)}%)`, vcpu: moduleData.buffers.kubernetes_infra_vcpu.toFixed(2), ram: moduleData.buffers.kubernetes_infra_ram.toFixed(2), prefix: '+' },
+    { label: `System Buffer (${(moduleData.buffers.system_buffer_pct * 100).toFixed(0)}%)`, vcpu: moduleData.buffers.system_buffer_vcpu.toFixed(2), ram: moduleData.buffers.system_buffer_ram.toFixed(2), prefix: '+' },
   ];
 
   doc.setFillColor(...WHITE);

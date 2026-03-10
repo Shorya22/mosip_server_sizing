@@ -319,15 +319,15 @@ export const Report = forwardRef<HTMLDivElement, ReportProps>(({ result, moduleT
             <p>{moduleData.buffers.base_vcpu} vCPU | {moduleData.buffers.base_ram} GB RAM</p>
           </div>
           <div className="buffer-detail-card">
-            <h4>+ Monitoring & Logging (20%)</h4>
+            <h4>+ Monitoring & Logging ({(moduleData.buffers.monitoring_logging_pct * 100).toFixed(0)}%)</h4>
             <p>+{moduleData.buffers.monitoring_logging_vcpu} vCPU | +{moduleData.buffers.monitoring_logging_ram} GB RAM</p>
           </div>
           <div className="buffer-detail-card">
-            <h4>+ Kubernetes Infra (30%)</h4>
+            <h4>+ Kubernetes Infra ({(moduleData.buffers.kubernetes_infra_pct * 100).toFixed(0)}%)</h4>
             <p>+{moduleData.buffers.kubernetes_infra_vcpu} vCPU | +{moduleData.buffers.kubernetes_infra_ram} GB RAM</p>
           </div>
           <div className="buffer-detail-card">
-            <h4>+ System Buffer (30%)</h4>
+            <h4>+ System Buffer ({(moduleData.buffers.system_buffer_pct * 100).toFixed(0)}%)</h4>
             <p>+{moduleData.buffers.system_buffer_vcpu} vCPU | +{moduleData.buffers.system_buffer_ram} GB RAM</p>
           </div>
         </div>
@@ -339,7 +339,7 @@ export const Report = forwardRef<HTMLDivElement, ReportProps>(({ result, moduleT
         <ul className="report-notes">
           <li>Storage requirements are NOT included in these calculations</li>
           <li>Calculations exclude Pre-Registration, KYC with OTP, and post-upload packet processing</li>
-          <li>Buffer allocations include: Monitoring & Logging (20%), Kubernetes Infrastructure (30%), System Buffer (30%)</li>
+          <li>Buffer allocations include: Monitoring & Logging ({(moduleData.buffers.monitoring_logging_pct * 100).toFixed(0)}%), Kubernetes Infrastructure ({(moduleData.buffers.kubernetes_infra_pct * 100).toFixed(0)}%), System Buffer ({(moduleData.buffers.system_buffer_pct * 100).toFixed(0)}%)</li>
           <li>Peak TPS calculations assume external systems (ABIS) have maximum 300ms response times</li>
           <li>Based on MOSIP Platform Release 1.3.0 performance benchmarks</li>
         </ul>

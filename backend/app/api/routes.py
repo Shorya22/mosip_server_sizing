@@ -250,7 +250,16 @@ async def calculate_combined(input_data: CombinedInput):
     - `mosip_version`: MOSIP version for calculation (optional, default: 1.3.0)
     """
     try:
-        calc = get_calculator(input_data.mosip_version)
+        # Build buffer overrides from user input (None values = use version defaults)
+        buffer_overrides = {}
+        if input_data.buffer_monitoring_logging is not None:
+            buffer_overrides["monitoring_logging"] = input_data.buffer_monitoring_logging
+        if input_data.buffer_kubernetes_infra is not None:
+            buffer_overrides["kubernetes_infra"] = input_data.buffer_kubernetes_infra
+        if input_data.buffer_system is not None:
+            buffer_overrides["system_buffer"] = input_data.buffer_system
+
+        calc = get_calculator(input_data.mosip_version, buffer_overrides or None)
         result = calc.calculate_combined(input_data)
         return result
     except ValueError as e:

@@ -29,6 +29,10 @@ export interface CombinedInput {
   // Multi-year projection settings
   annual_growth_rate: number; // 0-0.5 (0-50%)
   projection_years: number;
+  // Buffer percentages (optional overrides)
+  buffer_monitoring_logging: number | null;
+  buffer_kubernetes_infra: number | null;
+  buffer_system: number | null;
 }
 
 // =============================================================================
@@ -50,10 +54,13 @@ export interface ServiceResource {
 export interface BufferBreakdown {
   base_vcpu: number;
   base_ram: number;
+  monitoring_logging_pct: number;
   monitoring_logging_vcpu: number;
   monitoring_logging_ram: number;
+  kubernetes_infra_pct: number;
   kubernetes_infra_vcpu: number;
   kubernetes_infra_ram: number;
+  system_buffer_pct: number;
   system_buffer_vcpu: number;
   system_buffer_ram: number;
 }

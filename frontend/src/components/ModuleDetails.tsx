@@ -169,19 +169,19 @@ function BuffersBreakdown({ buffers }: { buffers: BufferBreakdown }) {
           </span>
         </div>
         <div className="buffer-item">
-          <span className="buffer-label">+ Monitoring & Logging (20%)</span>
+          <span className="buffer-label">+ Monitoring & Logging ({(buffers.monitoring_logging_pct * 100).toFixed(0)}%)</span>
           <span className="buffer-values">
             +{buffers.monitoring_logging_vcpu} vCPU / +{buffers.monitoring_logging_ram} GB RAM
           </span>
         </div>
         <div className="buffer-item">
-          <span className="buffer-label">+ Kubernetes Infra (30%)</span>
+          <span className="buffer-label">+ Kubernetes Infra ({(buffers.kubernetes_infra_pct * 100).toFixed(0)}%)</span>
           <span className="buffer-values">
             +{buffers.kubernetes_infra_vcpu} vCPU / +{buffers.kubernetes_infra_ram} GB RAM
           </span>
         </div>
         <div className="buffer-item">
-          <span className="buffer-label">+ System Buffer (30%)</span>
+          <span className="buffer-label">+ System Buffer ({(buffers.system_buffer_pct * 100).toFixed(0)}%)</span>
           <span className="buffer-values">
             +{buffers.system_buffer_vcpu} vCPU / +{buffers.system_buffer_ram} GB RAM
           </span>
