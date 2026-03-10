@@ -90,7 +90,7 @@ export function ResultsPanel({ result, moduleType }: ResultsPanelProps) {
           <span>
             Annual Growth Rate: <strong>{(result.annual_growth_rate * 100).toFixed(1)}%</strong>
             • Base Population: <strong>{formatNumber(result.projections[0]?.population || 0)}</strong>
-            • Year 10 Population: <strong>{formatNumber(result.projections[9]?.population || 0)}</strong>
+            • Year {result.projection_years} Population: <strong>{formatNumber(result.projections[result.projections.length - 1]?.population || 0)}</strong>
           </span>
         </div>
       )}
@@ -100,7 +100,7 @@ export function ResultsPanel({ result, moduleType }: ResultsPanelProps) {
         <div className="projection-table-section">
           <h3 className="section-title">
             <TrendingUp size={18} />
-            {isRegistration ? 'Registration' : 'Authentication'} - 10 Year Projection
+            {isRegistration ? 'Registration' : 'Authentication'} - {result.projection_years} Year Projection
           </h3>
           <div className="projection-table-container">
             <table className="projection-table">

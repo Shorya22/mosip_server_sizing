@@ -22,7 +22,7 @@ const DEFAULT_VALUES: CombinedInput = {
   peak_hour_percentage: 0.08,
   mosip_version: DEFAULT_VERSION,
   annual_growth_rate: 0,
-  projection_years: 10, // Always calculate 10 years for projection selector
+  projection_years: 10,
 };
 
 // Type for string-based input state (allows empty values while typing)
@@ -130,7 +130,7 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
       peak_hour_percentage: (parseFloat(inputStrings.peak_hour_percentage) || 8) / 100,
       mosip_version: inputStrings.mosip_version,
       annual_growth_rate: (parseFloat(inputStrings.annual_growth_rate) || 0) / 100,
-      projection_years: 10, // Always calculate 10 years for projection options
+      projection_years: parseInt(inputStrings.projection_years) || 10,
     };
 
     // Calculate registrations_per_device_per_day
@@ -366,6 +366,29 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
                 />
                 <span className="suffix">%</span>
               </div>
+            </div>
+
+            {/* Projection Years - shown for both modes */}
+            <div className="form-group">
+              <label htmlFor="projection_years">
+                <Clock size={14} />
+                Projection Years
+                <span className="helper-text">Number of years for resource projection (1-30)</span>
+              </label>
+              <select
+                id="projection_years"
+                value={inputStrings.projection_years}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setValues(prev => ({ ...prev, projection_years: parseInt(val) }));
+                  setInputStrings(prev => ({ ...prev, projection_years: val }));
+                }}
+                className="projection-years-dropdown"
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30].map(y => (
+                  <option key={y} value={y}>{y} {y === 1 ? 'Year' : 'Years'}</option>
+                ))}
+              </select>
             </div>
           </div>
         )}

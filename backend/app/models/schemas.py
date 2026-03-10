@@ -239,9 +239,9 @@ class CombinedInput(BaseModel):
     projection_years: int = Field(
         default=1,
         ge=1,
-        le=10,
-        description="Number of years to project (1-10)",
-        examples=[5]
+        le=30,
+        description="Number of years to project (1-30)",
+        examples=[5, 10, 15]
     )
 
 

@@ -1868,6 +1868,24 @@ body {
   opacity: 0.7;
 }
 
+.projection-years-dropdown {
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: 0.9375rem;
+  background: var(--color-bg-card);
+  color: var(--color-text);
+  width: 100%;
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.projection-years-dropdown:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+}
+
 .version-description {
   font-size: 0.75rem;
   color: var(--color-text-muted);
