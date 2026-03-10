@@ -28,7 +28,7 @@ export interface CombinedInput {
   mosip_version: string;
   // Multi-year projection settings
   annual_growth_rate: number; // 0-0.5 (0-50%)
-  projection_years: number;   // 1-30
+  projection_years: number;
 }
 
 // =============================================================================

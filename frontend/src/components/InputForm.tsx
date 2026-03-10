@@ -49,6 +49,7 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
   const [values, setValues] = useState<CombinedInput>(DEFAULT_VALUES);
   const [inputStrings, setInputStrings] = useState<InputStrings>(toInputStrings(DEFAULT_VALUES));
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [customYearsMode, setCustomYearsMode] = useState(false);
   const [versions, setVersions] = useState<VersionInfo[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(true);
 
@@ -146,6 +147,7 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
   const handleReset = () => {
     setValues(DEFAULT_VALUES);
     setInputStrings(toInputStrings(DEFAULT_VALUES));
+    setCustomYearsMode(false);
   };
 
   const isRegistration = mode === 'registration';
@@ -373,22 +375,75 @@ export function InputForm({ mode, onCalculate, isLoading }: InputFormProps) {
               <label htmlFor="projection_years">
                 <Clock size={14} />
                 Projection Years
-                <span className="helper-text">Number of years for resource projection (1-30)</span>
+                <span className="helper-text">Select preset or enter custom number of years</span>
               </label>
-              <select
-                id="projection_years"
-                value={inputStrings.projection_years}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setValues(prev => ({ ...prev, projection_years: parseInt(val) }));
-                  setInputStrings(prev => ({ ...prev, projection_years: val }));
-                }}
-                className="projection-years-dropdown"
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20, 25, 30].map(y => (
-                  <option key={y} value={y}>{y} {y === 1 ? 'Year' : 'Years'}</option>
-                ))}
-              </select>
+              <div className="projection-years-control">
+                {!customYearsMode ? (
+                  <select
+                    id="projection_years"
+                    value={inputStrings.projection_years}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val === 'custom') {
+                        setCustomYearsMode(true);
+                        setInputStrings(prev => ({ ...prev, projection_years: '' }));
+                      } else {
+                        setValues(prev => ({ ...prev, projection_years: parseInt(val) }));
+                        setInputStrings(prev => ({ ...prev, projection_years: val }));
+                      }
+                    }}
+                    className="projection-years-dropdown"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(y => (
+                      <option key={y} value={y}>{y} {y === 1 ? 'Year' : 'Years'}</option>
+                    ))}
+                    <option value="custom">Custom...</option>
+                  </select>
+                ) : (
+                  <div className="projection-years-custom">
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      id="projection_years"
+                      className="projection-years-input"
+                      value={inputStrings.projection_years}
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, '');
+                        setInputStrings(prev => ({ ...prev, projection_years: val }));
+                        if (val) {
+                          setValues(prev => ({ ...prev, projection_years: Math.max(1, parseInt(val)) }));
+                        }
+                      }}
+                      onBlur={() => {
+                        const num = parseInt(inputStrings.projection_years);
+                        if (!num || num < 1) {
+                          // If empty or invalid, go back to dropdown
+                          setCustomYearsMode(false);
+                          setInputStrings(prev => ({ ...prev, projection_years: '10' }));
+                          setValues(prev => ({ ...prev, projection_years: 10 }));
+                        } else {
+                          setValues(prev => ({ ...prev, projection_years: num }));
+                          setInputStrings(prev => ({ ...prev, projection_years: String(num) }));
+                        }
+                      }}
+                      placeholder="Enter number of years"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      className="btn-preset-toggle"
+                      onClick={() => {
+                        setCustomYearsMode(false);
+                        setInputStrings(prev => ({ ...prev, projection_years: '10' }));
+                        setValues(prev => ({ ...prev, projection_years: 10 }));
+                      }}
+                      title="Back to presets"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
