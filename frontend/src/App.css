@@ -195,6 +195,12 @@ body {
   margin-bottom: 20px;
 }
 
+.section-subtitle {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
 .config-grid {
   display: grid;
   gap: 20px;
@@ -257,6 +263,23 @@ body {
 
 .module-toggle:hover {
   border-color: var(--color-primary);
+}
+
+.module-toggle-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.module-toggle-label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.module-toggle-desc {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
 }
 
 .validation-error {

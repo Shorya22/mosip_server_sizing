@@ -151,19 +151,19 @@ export function InputForm({ selectedModules, onModuleChange, onCalculate, isLoad
 
   return (
     <form onSubmit={handleSubmit} className="config-form">
-      {/* Section 1: Version + Module Selection */}
+      {/* Section 1: Platform Version */}
       <div className="config-card">
         <div className="config-card-header">
           <h3 className="section-title">
             <Layers size={18} />
-            Platform & Modules
+            MOSIP Platform Version
           </h3>
         </div>
-        <div className="config-grid cols-2">
+        <div className="config-grid cols-1">
           <div className="form-group">
             <label htmlFor="mosip_version">
-              MOSIP Platform Version
-              <span className="helper-text">Select version for resource calculation</span>
+              Select Version
+              <span className="helper-text">Choose the MOSIP platform version for resource calculation</span>
             </label>
             <select
               id="mosip_version"
@@ -186,37 +186,47 @@ export function InputForm({ selectedModules, onModuleChange, onCalculate, isLoad
               )}
             </select>
           </div>
-
-          <div className="form-group">
-            <label>
-              Calculate For
-              <span className="helper-text">Select one or both modules</span>
-            </label>
-            <div className="module-toggles">
-              <label className={`module-toggle ${selectedModules.registration ? 'selected' : ''}`}>
-                <input
-                  type="checkbox"
-                  checked={selectedModules.registration}
-                  onChange={(e) => onModuleChange({ ...selectedModules, registration: e.target.checked })}
-                />
-                <Upload size={18} />
-                <span>Registration</span>
-              </label>
-              <label className={`module-toggle ${selectedModules.authentication ? 'selected' : ''}`}>
-                <input
-                  type="checkbox"
-                  checked={selectedModules.authentication}
-                  onChange={(e) => onModuleChange({ ...selectedModules, authentication: e.target.checked })}
-                />
-                <Shield size={18} />
-                <span>Authentication</span>
-              </label>
-            </div>
-            {noModuleSelected && (
-              <span className="validation-error">Please select at least one module</span>
-            )}
-          </div>
         </div>
+      </div>
+
+      {/* Section 2: MOSIP Modules */}
+      <div className="config-card">
+        <div className="config-card-header">
+          <h3 className="section-title">
+            <Settings size={18} />
+            MOSIP Modules
+          </h3>
+          <p className="section-subtitle">Select the modules you want to calculate resources for</p>
+        </div>
+        <div className="module-toggles">
+          <label className={`module-toggle ${selectedModules.registration ? 'selected' : ''}`}>
+            <input
+              type="checkbox"
+              checked={selectedModules.registration}
+              onChange={(e) => onModuleChange({ ...selectedModules, registration: e.target.checked })}
+            />
+            <Upload size={20} />
+            <div className="module-toggle-text">
+              <span className="module-toggle-label">Registration</span>
+              <span className="module-toggle-desc">Upload & SyncData module</span>
+            </div>
+          </label>
+          <label className={`module-toggle ${selectedModules.authentication ? 'selected' : ''}`}>
+            <input
+              type="checkbox"
+              checked={selectedModules.authentication}
+              onChange={(e) => onModuleChange({ ...selectedModules, authentication: e.target.checked })}
+            />
+            <Shield size={20} />
+            <div className="module-toggle-text">
+              <span className="module-toggle-label">Authentication</span>
+              <span className="module-toggle-desc">ID Authentication module</span>
+            </div>
+          </label>
+        </div>
+        {noModuleSelected && (
+          <span className="validation-error">Please select at least one module</span>
+        )}
       </div>
 
       {/* Section 2: Common Parameters */}
