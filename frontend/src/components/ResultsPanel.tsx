@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { SummaryCard } from './SummaryCard';
 import { ModuleDetails } from './ModuleDetails';
 import { ReportModal } from './ReportModal';
-import { FileText, FileBarChart, Layers, TrendingUp, Database, HardDrive, FileSearch, ChevronDown, ChevronUp, Table2 } from 'lucide-react';
+import { FileText, FileBarChart, Layers, TrendingUp, Database, HardDrive, FileSearch, ChevronDown, ChevronUp, Table2, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { CombinedOutput, CalculatorMode } from '../types';
 
 interface ResultsPanelProps {
@@ -13,6 +13,10 @@ interface ResultsPanelProps {
 export function ResultsPanel({ result, moduleType }: ResultsPanelProps) {
   const [showReportModal, setShowReportModal] = useState(false);
   const [showProjectionTable, setShowProjectionTable] = useState(false);
+  const [projectionPage, setProjectionPage] = useState(0);
+
+  // Reset page when results change
+  useEffect(() => { setProjectionPage(0); }, [result]);
 
   if (!result) {
     return (
@@ -96,85 +100,131 @@ export function ResultsPanel({ result, moduleType }: ResultsPanelProps) {
       )}
 
       {/* Projection Table */}
-      {hasProjections && showProjectionTable && (
-        <div className="projection-table-section">
-          <h3 className="section-title">
-            <TrendingUp size={18} />
-            {isRegistration ? 'Registration' : 'Authentication'} - {result.projection_years} Year Projection
-          </h3>
-          <div className="projection-table-container">
-            <table className="projection-table">
-              <thead>
-                <tr>
-                  <th>Year</th>
-                  <th>Population</th>
-                  <th>Growth</th>
-                  {isRegistration ? (
-                    <>
-                      <th>Daily Reg</th>
-                      <th>TPS</th>
-                      <th>vCPU</th>
-                      <th>RAM</th>
-                      <th>Pods</th>
-                      <th>Days</th>
-                    </>
-                  ) : (
-                    <>
-                      <th>Daily Auth</th>
-                      <th>TPS</th>
-                      <th>vCPU</th>
-                      <th>RAM</th>
-                      <th>Pods</th>
-                      <th>Postgres</th>
-                      <th>Logs UINs</th>
-                      <th>Logs Auth/d</th>
-                    </>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {result.projections.map((proj) => (
-                  <tr key={proj.year} className={proj.year === 1 ? 'current-year' : ''}>
-                    <td className="year-cell">{proj.year}</td>
-                    <td>{formatNumber(proj.population)}</td>
-                    <td className="growth-cell">
-                      {proj.year === 1 ? '-' : `+${((proj.year - 1) * result.annual_growth_rate * 100).toFixed(0)}%`}
-                    </td>
+      {hasProjections && showProjectionTable && (() => {
+        const PAGE_SIZE = 10;
+        const totalYears = result.projections.length;
+        const totalPages = Math.ceil(totalYears / PAGE_SIZE);
+        const needsPagination = totalYears > PAGE_SIZE;
+        const startIdx = projectionPage * PAGE_SIZE;
+        const visibleProjections = result.projections.slice(startIdx, startIdx + PAGE_SIZE);
+
+        return (
+          <div className="projection-table-section">
+            <div className="projection-table-header">
+              <h3 className="section-title">
+                <TrendingUp size={18} />
+                {isRegistration ? 'Registration' : 'Authentication'} - {result.projection_years} Year Projection
+              </h3>
+              {needsPagination && (
+                <div className="projection-pagination">
+                  <button
+                    className="btn-page"
+                    onClick={() => setProjectionPage(p => Math.max(0, p - 1))}
+                    disabled={projectionPage === 0}
+                  >
+                    <ChevronLeft size={16} />
+                  </button>
+                  <span className="page-info">
+                    Year {startIdx + 1}-{Math.min(startIdx + PAGE_SIZE, totalYears)} of {totalYears}
+                  </span>
+                  <button
+                    className="btn-page"
+                    onClick={() => setProjectionPage(p => Math.min(totalPages - 1, p + 1))}
+                    disabled={projectionPage >= totalPages - 1}
+                  >
+                    <ChevronRight size={16} />
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="projection-table-container">
+              <table className="projection-table">
+                <thead>
+                  <tr>
+                    <th>Year</th>
+                    <th>Population</th>
+                    <th>Growth</th>
                     {isRegistration ? (
                       <>
-                        <td>{formatNumber(proj.daily_registrations)}</td>
-                        <td>{proj.peak_tps_registration.toFixed(2)}</td>
-                        <td>{formatNumber(proj.registration_vcpu)}</td>
-                        <td>{formatNumber(proj.registration_ram)}</td>
-                        <td>{formatNumber(proj.registration_pods)}</td>
-                        <td>{formatNumber(proj.registration_duration_days)}</td>
+                        <th>Daily Reg</th>
+                        <th>TPS</th>
+                        <th>vCPU</th>
+                        <th>RAM</th>
+                        <th>Pods</th>
+                        <th>Days</th>
                       </>
                     ) : (
                       <>
-                        <td>{formatNumber(proj.daily_authentications)}</td>
-                        <td>{proj.peak_tps_authentication.toFixed(2)}</td>
-                        <td>{formatNumber(proj.authentication_vcpu)}</td>
-                        <td>{formatNumber(proj.authentication_ram)}</td>
-                        <td>{formatNumber(proj.authentication_pods)}</td>
-                        <td>{formatNumber(Math.round(proj.postgres_db_gb))}</td>
-                        <td>{formatNumber(Math.round(proj.logs_uins_issued_gb))}</td>
-                        <td>{formatNumber(Math.round(proj.logs_daily_auths_gb))}</td>
+                        <th>Daily Auth</th>
+                        <th>TPS</th>
+                        <th>vCPU</th>
+                        <th>RAM</th>
+                        <th>Pods</th>
+                        <th>Postgres</th>
+                        <th>Logs UINs</th>
+                        <th>Logs Auth/d</th>
                       </>
                     )}
                   </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="projection-table-legend">
-              {isRegistration ? (
-                <span>Daily Reg = Daily Registrations | TPS = Peak TPS | RAM in GB | Days = Working Days</span>
-              ) : (
-                <span>Daily Auth = Authentications | TPS = Peak TPS | RAM in GB | Storage values in GB | Auth/d = GB/day</span>
-              )}
+                </thead>
+                <tbody>
+                  {visibleProjections.map((proj) => (
+                    <tr key={proj.year} className={proj.year === 1 ? 'current-year' : ''}>
+                      <td className="year-cell">{proj.year}</td>
+                      <td>{formatNumber(proj.population)}</td>
+                      <td className="growth-cell">
+                        {proj.year === 1 ? '-' : `+${((proj.year - 1) * result.annual_growth_rate * 100).toFixed(0)}%`}
+                      </td>
+                      {isRegistration ? (
+                        <>
+                          <td>{formatNumber(proj.daily_registrations)}</td>
+                          <td>{proj.peak_tps_registration.toFixed(2)}</td>
+                          <td>{formatNumber(proj.registration_vcpu)}</td>
+                          <td>{formatNumber(proj.registration_ram)}</td>
+                          <td>{formatNumber(proj.registration_pods)}</td>
+                          <td>{formatNumber(proj.registration_duration_days)}</td>
+                        </>
+                      ) : (
+                        <>
+                          <td>{formatNumber(proj.daily_authentications)}</td>
+                          <td>{proj.peak_tps_authentication.toFixed(2)}</td>
+                          <td>{formatNumber(proj.authentication_vcpu)}</td>
+                          <td>{formatNumber(proj.authentication_ram)}</td>
+                          <td>{formatNumber(proj.authentication_pods)}</td>
+                          <td>{formatNumber(Math.round(proj.postgres_db_gb))}</td>
+                          <td>{formatNumber(Math.round(proj.logs_uins_issued_gb))}</td>
+                          <td>{formatNumber(Math.round(proj.logs_daily_auths_gb))}</td>
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div className="projection-table-footer">
+                <div className="projection-table-legend">
+                  {isRegistration ? (
+                    <span>Daily Reg = Daily Registrations | TPS = Peak TPS | RAM in GB | Days = Working Days</span>
+                  ) : (
+                    <span>Daily Auth = Authentications | TPS = Peak TPS | RAM in GB | Storage values in GB | Auth/d = GB/day</span>
+                  )}
+                </div>
+                {needsPagination && (
+                  <div className="projection-page-dots">
+                    {Array.from({ length: totalPages }, (_, i) => (
+                      <button
+                        key={i}
+                        className={`page-dot ${i === projectionPage ? 'active' : ''}`}
+                        onClick={() => setProjectionPage(i)}
+                        title={`Year ${i * PAGE_SIZE + 1}-${Math.min((i + 1) * PAGE_SIZE, totalYears)}`}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       <SummaryCard
         result={result}
