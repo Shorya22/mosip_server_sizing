@@ -1,29 +1,31 @@
 import { useState } from 'react';
 import { Header, TabNavigation, InputForm, ResultsPanel } from './components';
 import { calculatorApi } from './api/calculator';
-import type { CalculatorMode, CombinedInput, CombinedOutput } from './types';
+import { ArrowLeft } from 'lucide-react';
+import type { AppPage, CalculatorMode, ModuleSelection, CombinedInput, CombinedOutput } from './types';
 import './App.css';
 
 function App() {
-  const [activeTab, setActiveTab] = useState<CalculatorMode>('registration');
+  const [page, setPage] = useState<AppPage>('configure');
+  const [selectedModules, setSelectedModules] = useState<ModuleSelection>({
+    registration: true,
+    authentication: true,
+  });
+  const [resultsTab, setResultsTab] = useState<CalculatorMode>('registration');
   const [result, setResult] = useState<CombinedOutput | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const handleTabChange = (tab: CalculatorMode) => {
-    setActiveTab(tab);
-    setResult(null); // Clear results when switching tabs
-    setError(null);
-  };
 
   const handleCalculate = async (input: CombinedInput) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      // Use combined endpoint to get both module calculations and projections
       const calculationResult = await calculatorApi.calculateCombined(input);
       setResult(calculationResult);
+      // Set initial results tab to first selected module
+      setResultsTab(selectedModules.registration ? 'registration' : 'authentication');
+      setPage('results');
     } catch (err) {
       console.error('Calculation error:', err);
       setError(
@@ -36,14 +38,18 @@ function App() {
     }
   };
 
+  const handleBackToConfig = () => {
+    setPage('configure');
+    setError(null);
+  };
+
   return (
     <div className="app">
       <Header />
 
-      <main className="main-content">
-        <div className="container">
-          <TabNavigation activeTab={activeTab} onTabChange={handleTabChange} />
-
+      {/* Configuration Page - always mounted, hidden when on results */}
+      <main className="main-content" style={{ display: page === 'configure' ? 'block' : 'none' }}>
+        <div className="container config-container">
           {error && (
             <div className="error-banner">
               <span>Error: {error}</span>
@@ -51,22 +57,39 @@ function App() {
             </div>
           )}
 
-          <div className="calculator-layout">
-            <div className="input-section">
-              <h2>Configuration</h2>
-              <InputForm
-                mode={activeTab}
-                onCalculate={handleCalculate}
-                isLoading={isLoading}
-              />
-            </div>
-
-            <div className="results-section">
-              <ResultsPanel result={result} moduleType={activeTab} />
-            </div>
-          </div>
+          <InputForm
+            selectedModules={selectedModules}
+            onModuleChange={setSelectedModules}
+            onCalculate={handleCalculate}
+            isLoading={isLoading}
+          />
         </div>
       </main>
+
+      {/* Results Page */}
+      {page === 'results' && result && (
+        <main className="main-content">
+          <div className="container results-container">
+            <div className="results-top-bar">
+              <button className="btn btn-back" onClick={handleBackToConfig}>
+                <ArrowLeft size={18} />
+                Edit Configuration
+              </button>
+            </div>
+
+            {/* Show tabs only if both modules selected */}
+            {selectedModules.registration && selectedModules.authentication && (
+              <TabNavigation
+                activeTab={resultsTab}
+                onTabChange={setResultsTab}
+                availableModules={selectedModules}
+              />
+            )}
+
+            <ResultsPanel result={result} moduleType={resultsTab} />
+          </div>
+        </main>
+      )}
 
       <footer className="footer">
         <div className="container">

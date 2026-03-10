@@ -1,9 +1,10 @@
 import { Upload, Shield } from 'lucide-react';
-import type { CalculatorMode, TabConfig } from '../types';
+import type { CalculatorMode, ModuleSelection, TabConfig } from '../types';
 
 interface TabNavigationProps {
   activeTab: CalculatorMode;
   onTabChange: (tab: CalculatorMode) => void;
+  availableModules: ModuleSelection;
 }
 
 const TABS: TabConfig[] = [
@@ -24,10 +25,14 @@ const TAB_ICONS: Record<string, typeof Upload> = {
   authentication: Shield,
 };
 
-export function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
+export function TabNavigation({ activeTab, onTabChange, availableModules }: TabNavigationProps) {
+  const visibleTabs = TABS.filter(tab => availableModules[tab.id]);
+
+  if (visibleTabs.length <= 1) return null;
+
   return (
     <div className="tab-navigation">
-      {TABS.map((tab) => {
+      {visibleTabs.map((tab) => {
         const Icon = TAB_ICONS[tab.id];
         return (
           <button

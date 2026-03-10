@@ -168,38 +168,158 @@ body {
   color: var(--color-text-light);
 }
 
-/* Calculator Layout */
-.calculator-layout {
-  display: grid;
-  grid-template-columns: 340px 1fr;
-  gap: 32px;
-  align-items: start;
+/* Configuration Page */
+.config-container {
+  max-width: 960px;
+  margin: 0 auto;
 }
 
-@media (max-width: 1024px) {
-  .calculator-layout {
+.config-form {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.config-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: 24px 28px;
+}
+
+.config-card.collapsible {
+  padding: 8px 28px;
+}
+
+.config-card-header {
+  margin-bottom: 20px;
+}
+
+.config-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.config-grid.cols-1 {
+  grid-template-columns: 1fr;
+}
+
+.config-grid.cols-2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.config-grid.cols-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 768px) {
+  .config-grid.cols-2,
+  .config-grid.cols-3 {
     grid-template-columns: 1fr;
   }
 }
 
-/* Input Section */
-.input-section {
-  background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  padding: 20px;
-  position: sticky;
-  top: 24px;
+.section-body {
+  padding-top: 16px;
+  padding-bottom: 8px;
 }
 
-.input-section h2 {
-  font-size: 1.125rem;
-  font-weight: 600;
+/* Module Selection Toggles */
+.module-toggles {
+  display: flex;
+  gap: 12px;
+}
+
+.module-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+  flex: 1;
+}
+
+.module-toggle input[type="checkbox"] {
+  display: none;
+}
+
+.module-toggle.selected {
+  border-color: var(--color-primary);
+  background: rgba(30, 64, 175, 0.05);
+  color: var(--color-primary);
+}
+
+.module-toggle:hover {
+  border-color: var(--color-primary);
+}
+
+.validation-error {
+  color: #dc2626;
+  font-size: 0.75rem;
+  margin-top: 4px;
+}
+
+/* Module Parameters Side-by-Side */
+.module-params-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 24px;
+}
+
+.module-card {
+  border-left: 3px solid var(--color-primary);
+}
+
+/* Configuration Actions */
+.config-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 8px 0;
+}
+
+.btn-lg {
+  padding: 14px 32px;
+  font-size: 1rem;
+}
+
+/* Results Page */
+.results-container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.results-top-bar {
   margin-bottom: 20px;
-  color: var(--color-text);
 }
 
-/* Form Styles */
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  color: var(--color-text);
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.btn-back:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+/* Legacy - keep for form elements inside config cards */
 .input-form {
   display: flex;
   flex-direction: column;

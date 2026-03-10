@@ -178,6 +178,13 @@ export interface VersionListResponse {
 
 export type CalculatorMode = 'registration' | 'authentication';
 
+export type AppPage = 'configure' | 'results';
+
+export interface ModuleSelection {
+  registration: boolean;
+  authentication: boolean;
+}
+
 export interface TabConfig {
   id: CalculatorMode;
   label: string;
