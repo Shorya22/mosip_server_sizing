@@ -45,8 +45,7 @@ export function ReportModal({ isOpen, onClose, result, moduleType }: ReportModal
   const handleExportExcel = async () => {
     setIsExporting('excel');
     try {
-      await new Promise(resolve => setTimeout(resolve, 300));
-      exportToExcel(result, reportScope);
+      await exportToExcel(result, reportScope);
     } finally {
       setIsExporting(null);
     }

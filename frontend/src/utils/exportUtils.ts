@@ -1,7 +1,8 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import * as XLSX from 'xlsx';
-import type { CombinedOutput, RegistrationOutput, AuthenticationOutput } from '../types';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
+import type { CombinedOutput } from '../types';
 
 declare module 'jspdf' {
   interface jsPDF {
@@ -499,186 +500,474 @@ export function exportToPDF(
 }
 
 // ===========================================================================
-// EXCEL EXPORT
+// EXCEL EXPORT — Professional styled with ExcelJS
 // ===========================================================================
 
-function addModuleSheet(workbook: XLSX.WorkBook, result: CombinedOutput, moduleType: 'registration' | 'authentication') {
+// Style constants
+const EXCEL_PRIMARY = { argb: 'FF1E40AF' };
+const EXCEL_PRIMARY_LIGHT = { argb: 'FFEEF2FF' };
+const EXCEL_SUCCESS = { argb: 'FF059669' };
+const EXCEL_SUCCESS_LIGHT = { argb: 'FFECFDF5' };
+const EXCEL_DARK = { argb: 'FF1E293B' };
+const EXCEL_GRAY = { argb: 'FF64748B' };
+const EXCEL_LIGHT_BG = { argb: 'FFF8FAFC' };
+const EXCEL_WHITE = { argb: 'FFFFFFFF' };
+const EXCEL_BORDER_COLOR = { argb: 'FFE2E8F0' };
+const EXCEL_ACCENT = { argb: 'FFF59E0B' };
+const EXCEL_PURPLE = { argb: 'FF8B5CF6' };
+
+type ExcelFill = ExcelJS.FillPattern;
+type ExcelBorder = Partial<ExcelJS.Borders>;
+
+const headerFill: ExcelFill = { type: 'pattern', pattern: 'solid', fgColor: EXCEL_PRIMARY };
+const sectionFill: ExcelFill = { type: 'pattern', pattern: 'solid', fgColor: EXCEL_LIGHT_BG };
+const altRowFill: ExcelFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCFCFE' } };
+const totalRowFill: ExcelFill = { type: 'pattern', pattern: 'solid', fgColor: EXCEL_PRIMARY_LIGHT };
+const successFill: ExcelFill = { type: 'pattern', pattern: 'solid', fgColor: EXCEL_SUCCESS_LIGHT };
+
+const thinBorder: ExcelBorder = {
+  top: { style: 'thin', color: EXCEL_BORDER_COLOR },
+  bottom: { style: 'thin', color: EXCEL_BORDER_COLOR },
+  left: { style: 'thin', color: EXCEL_BORDER_COLOR },
+  right: { style: 'thin', color: EXCEL_BORDER_COLOR },
+};
+
+const headerFont: Partial<ExcelJS.Font> = { bold: true, color: EXCEL_WHITE, size: 10, name: 'Calibri' };
+const sectionFont: Partial<ExcelJS.Font> = { bold: true, color: EXCEL_PRIMARY, size: 11, name: 'Calibri' };
+const labelFont: Partial<ExcelJS.Font> = { color: EXCEL_GRAY, size: 10, name: 'Calibri' };
+const valueFont: Partial<ExcelJS.Font> = { bold: true, color: EXCEL_DARK, size: 10, name: 'Calibri' };
+const bigValueFont: Partial<ExcelJS.Font> = { bold: true, color: EXCEL_PRIMARY, size: 14, name: 'Calibri' };
+const totalFont: Partial<ExcelJS.Font> = { bold: true, color: EXCEL_PRIMARY, size: 10, name: 'Calibri' };
+
+function addStyledTable(
+  ws: ExcelJS.Worksheet,
+  startRow: number,
+  headers: string[],
+  rows: (string | number)[][],
+  options?: { totalRow?: (string | number)[]; numCols?: number[] }
+): number {
+  const colCount = headers.length;
+
+  // Header row
+  const headerRow = ws.getRow(startRow);
+  headers.forEach((h, i) => {
+    const cell = headerRow.getCell(i + 1);
+    cell.value = h;
+    cell.font = headerFont;
+    cell.fill = headerFill;
+    cell.alignment = { horizontal: i === 0 ? 'left' : 'center', vertical: 'middle' };
+    cell.border = thinBorder;
+  });
+  headerRow.height = 24;
+
+  // Data rows
+  rows.forEach((row, rowIdx) => {
+    const r = ws.getRow(startRow + 1 + rowIdx);
+    row.forEach((val, colIdx) => {
+      const cell = r.getCell(colIdx + 1);
+      cell.value = val;
+      cell.font = { ...valueFont, bold: false };
+      cell.alignment = { horizontal: colIdx === 0 ? 'left' : 'center', vertical: 'middle' };
+      cell.border = thinBorder;
+      if (rowIdx % 2 === 1) cell.fill = altRowFill;
+      if (options?.numCols?.includes(colIdx) && typeof val === 'number') {
+        cell.numFmt = '#,##0';
+      }
+    });
+    r.height = 20;
+  });
+
+  // Total row
+  let endRow = startRow + rows.length;
+  if (options?.totalRow) {
+    endRow++;
+    const r = ws.getRow(endRow);
+    options.totalRow.forEach((val, colIdx) => {
+      const cell = r.getCell(colIdx + 1);
+      cell.value = val;
+      cell.font = totalFont;
+      cell.fill = totalRowFill;
+      cell.alignment = { horizontal: colIdx === 0 ? 'left' : 'center', vertical: 'middle' };
+      cell.border = {
+        top: { style: 'medium', color: EXCEL_PRIMARY },
+        bottom: { style: 'medium', color: EXCEL_PRIMARY },
+        left: { style: 'thin', color: EXCEL_BORDER_COLOR },
+        right: { style: 'thin', color: EXCEL_BORDER_COLOR },
+      };
+    });
+    r.height = 24;
+  }
+
+  return endRow + 2;
+}
+
+function addSectionHeader(ws: ExcelJS.Worksheet, row: number, title: string, colSpan: number): number {
+  ws.mergeCells(row, 1, row, colSpan);
+  const cell = ws.getCell(row, 1);
+  cell.value = title;
+  cell.font = sectionFont;
+  cell.fill = sectionFill;
+  cell.alignment = { vertical: 'middle' };
+  cell.border = { bottom: { style: 'medium', color: EXCEL_PRIMARY } };
+  ws.getRow(row).height = 28;
+  return row + 1;
+}
+
+function addKeyValuePairs(
+  ws: ExcelJS.Worksheet,
+  startRow: number,
+  pairs: { label: string; value: string | number; highlight?: boolean }[]
+): number {
+  pairs.forEach((pair, i) => {
+    const r = ws.getRow(startRow + i);
+    const labelCell = r.getCell(1);
+    labelCell.value = pair.label;
+    labelCell.font = labelFont;
+    labelCell.alignment = { vertical: 'middle' };
+    labelCell.border = thinBorder;
+
+    const valueCell = r.getCell(2);
+    valueCell.value = pair.value;
+    valueCell.font = pair.highlight ? bigValueFont : valueFont;
+    valueCell.alignment = { vertical: 'middle', horizontal: 'right' };
+    valueCell.border = thinBorder;
+    if (pair.highlight) valueCell.fill = { type: 'pattern', pattern: 'solid', fgColor: EXCEL_PRIMARY_LIGHT };
+
+    r.height = pair.highlight ? 28 : 22;
+  });
+  return startRow + pairs.length + 1;
+}
+
+function addReportTitle(ws: ExcelJS.Worksheet, title: string, subtitle: string, version: string, colSpan: number): number {
+  // Title row
+  ws.mergeCells(1, 1, 1, colSpan);
+  const titleCell = ws.getCell(1, 1);
+  titleCell.value = 'MOSIP Server Sizing Report';
+  titleCell.font = { bold: true, size: 16, color: EXCEL_PRIMARY, name: 'Calibri' };
+  titleCell.alignment = { vertical: 'middle' };
+  ws.getRow(1).height = 32;
+
+  // Subtitle row
+  ws.mergeCells(2, 1, 2, colSpan);
+  const subCell = ws.getCell(2, 1);
+  subCell.value = `${title}  |  ${formatDate()}  |  MOSIP ${version}`;
+  subCell.font = { size: 10, color: EXCEL_GRAY, name: 'Calibri' };
+  ws.getRow(2).height = 20;
+
+  // Divider
+  for (let c = 1; c <= colSpan; c++) {
+    ws.getCell(3, c).border = { bottom: { style: 'medium', color: EXCEL_PRIMARY } };
+  }
+  ws.getRow(3).height = 6;
+
+  return 5;
+}
+
+function addModuleSheetExcel(
+  workbook: ExcelJS.Workbook,
+  result: CombinedOutput,
+  moduleType: 'registration' | 'authentication'
+) {
   const isRegistration = moduleType === 'registration';
   const moduleData = isRegistration ? result.registration : result.authentication;
   const moduleName = isRegistration ? 'Registration' : 'Authentication';
+  const fullName = isRegistration ? 'Registration Upload & SyncData' : 'ID Authentication';
 
   if (!moduleData) return;
 
-  // Summary data
-  const summaryData: (string | number)[][] = [
-    [isRegistration ? 'Registration Upload & SyncData' : 'ID Authentication'],
-    [''],
-    ['RESOURCE SUMMARY'],
-    ['Total vCPU', moduleData.total_vcpu],
-    ['Total RAM (GB)', moduleData.total_ram],
-    ['Total Pods', moduleData.total_pods],
-    [''],
-    ['PERFORMANCE METRICS'],
-    [isRegistration ? 'Daily Registrations' : 'Daily Authentications', isRegistration ? result.registration.daily_registrations : result.authentication.daily_authentications],
-    [isRegistration ? 'Peak Daily Upload' : 'Peak Hour Auth', isRegistration ? result.registration.peak_daily_upload : result.authentication.peak_hour_authentications],
-    ['Peak TPS', moduleData.peak_tps],
-    ['Scale Factor', moduleData.scale_factor],
-    ['Baseline TPS', moduleData.baseline_tps],
-    [''],
-    ['INPUT PARAMETERS'],
-  ];
+  // Summary Sheet
+  const ws = workbook.addWorksheet(`${moduleName} Summary`);
+  ws.columns = [{ width: 30 }, { width: 20 }, { width: 15 }, { width: 15 }];
 
+  let row = addReportTitle(ws, fullName, '', result.mosip_version || '1.3.0', 4);
+
+  // Resource Summary
+  row = addSectionHeader(ws, row, 'RESOURCE SUMMARY', 4);
+  row = addKeyValuePairs(ws, row, [
+    { label: 'Total vCPU', value: moduleData.total_vcpu, highlight: true },
+    { label: 'Total RAM (GB)', value: moduleData.total_ram, highlight: true },
+    { label: 'Total Pods', value: moduleData.total_pods, highlight: true },
+  ]);
+
+  // Performance Metrics
+  row = addSectionHeader(ws, row, 'PERFORMANCE METRICS', 4);
+  row = addKeyValuePairs(ws, row, [
+    { label: isRegistration ? 'Daily Registrations' : 'Daily Authentications', value: isRegistration ? result.registration.daily_registrations : result.authentication.daily_authentications },
+    { label: isRegistration ? 'Peak Daily Upload' : 'Peak Hour Auth', value: isRegistration ? result.registration.peak_daily_upload : result.authentication.peak_hour_authentications },
+    { label: 'Peak TPS', value: Number(moduleData.peak_tps.toFixed(2)), highlight: true },
+    { label: 'Scale Factor', value: `${moduleData.scale_factor.toFixed(2)}x` },
+    { label: 'Baseline TPS', value: moduleData.baseline_tps },
+    ...(isRegistration ? [{ label: 'Registration Duration (Days)', value: result.registration_duration_days }] : []),
+  ]);
+
+  // Input Parameters
+  row = addSectionHeader(ws, row, 'INPUT PARAMETERS', 4);
   if (isRegistration) {
-    summaryData.push(
-      ['Total Population', result.registration.inputs.total_population],
-      ['Registration Devices', result.registration.inputs.num_registration_devices],
-      ['Registrations/Device/Day', result.registration.inputs.registrations_per_device_per_day],
-      ['Upload Window (Hours)', result.registration.inputs.upload_window_hours],
-      ['Peak Day Multiplier', result.registration.inputs.peak_day_multiplier],
-      ['Registration Duration (Days)', result.registration_duration_days],
-    );
+    row = addKeyValuePairs(ws, row, [
+      { label: 'Total Population', value: result.registration.inputs.total_population },
+      { label: 'Registration Devices', value: result.registration.inputs.num_registration_devices },
+      { label: 'Registrations/Device/Day', value: result.registration.inputs.registrations_per_device_per_day },
+      { label: 'Upload Window (Hours)', value: result.registration.inputs.upload_window_hours },
+      { label: 'Peak Day Multiplier', value: result.registration.inputs.peak_day_multiplier },
+    ]);
   } else {
-    summaryData.push(
-      ['Total Population', result.authentication.inputs.total_population],
-      ['Daily Auth Rate (%)', result.authentication.inputs.avg_auth_percentage * 100],
-      ['Peak Hour Rate (%)', result.authentication.inputs.peak_hour_percentage * 100],
-    );
+    row = addKeyValuePairs(ws, row, [
+      { label: 'Total Population', value: result.authentication.inputs.total_population },
+      { label: 'Daily Auth Rate', value: `${(result.authentication.inputs.avg_auth_percentage * 100).toFixed(1)}%` },
+      { label: 'Peak Hour Rate', value: `${(result.authentication.inputs.peak_hour_percentage * 100).toFixed(1)}%` },
+    ]);
   }
 
-  summaryData.push(
-    [''],
-    ['BUFFER ALLOCATION'],
-    ['Base vCPU', moduleData.buffers.base_vcpu],
-    ['Base RAM (GB)', moduleData.buffers.base_ram],
-    [`Monitoring & Logging (${(moduleData.buffers.monitoring_logging_pct * 100).toFixed(0)}%)`, `+${moduleData.buffers.monitoring_logging_vcpu} vCPU / +${moduleData.buffers.monitoring_logging_ram} GB`],
-    [`Kubernetes Infra (${(moduleData.buffers.kubernetes_infra_pct * 100).toFixed(0)}%)`, `+${moduleData.buffers.kubernetes_infra_vcpu} vCPU / +${moduleData.buffers.kubernetes_infra_ram} GB`],
-    [`System Buffer (${(moduleData.buffers.system_buffer_pct * 100).toFixed(0)}%)`, `+${moduleData.buffers.system_buffer_vcpu} vCPU / +${moduleData.buffers.system_buffer_ram} GB`],
+  // Buffer Allocation
+  row = addSectionHeader(ws, row, 'BUFFER ALLOCATION', 4);
+  const b = moduleData.buffers;
+  row = addKeyValuePairs(ws, row, [
+    { label: 'Base Resources', value: `${b.base_vcpu} vCPU / ${b.base_ram} GB RAM` },
+    { label: `+ Monitoring & Logging (${(b.monitoring_logging_pct * 100).toFixed(0)}%)`, value: `+${b.monitoring_logging_vcpu} vCPU / +${b.monitoring_logging_ram} GB` },
+    { label: `+ Kubernetes Infra (${(b.kubernetes_infra_pct * 100).toFixed(0)}%)`, value: `+${b.kubernetes_infra_vcpu} vCPU / +${b.kubernetes_infra_ram} GB` },
+    { label: `+ System Buffer (${(b.system_buffer_pct * 100).toFixed(0)}%)`, value: `+${b.system_buffer_vcpu} vCPU / +${b.system_buffer_ram} GB` },
+  ]);
+
+  // Services Sheet
+  const svcWs = workbook.addWorksheet(`${moduleName} Services`);
+  svcWs.columns = [
+    { width: 32 }, { width: 12 }, { width: 14 }, { width: 12 },
+    { width: 14 }, { width: 14 }, { width: 16 }, { width: 12 },
+  ];
+
+  let svcRow = addReportTitle(svcWs, `${fullName} — Service Breakdown`, '', result.mosip_version || '1.3.0', 8);
+
+  svcRow = addStyledTable(
+    svcWs, svcRow,
+    ['Service', 'vCPU/Pod', 'RAM/Pod (GB)', 'Base Pods', 'Scaled Pods', 'Total vCPU', 'Total RAM (GB)', 'Type'],
+    moduleData.services.map(s => [s.description, s.vcpu_per_pod, s.ram_per_pod, s.base_pods, s.scaled_pods, s.total_vcpu, s.total_ram, s.is_fixed ? 'Fixed' : 'Scalable']),
+    {
+      totalRow: ['Total', '', '', '', moduleData.total_pods, moduleData.total_vcpu, moduleData.total_ram, ''],
+      numCols: [1, 2, 3, 4, 5, 6],
+    }
   );
 
-  const sheet = XLSX.utils.aoa_to_sheet(summaryData);
-  sheet['!cols'] = [{ wch: 30 }, { wch: 25 }];
-  XLSX.utils.book_append_sheet(workbook, sheet, `${moduleName} Summary`);
-
-  // Services sheet
-  const servicesData: (string | number)[][] = [
-    ['Service', 'vCPU/Pod', 'RAM/Pod (GB)', 'Base Pods', 'Scaled Pods', 'Total vCPU', 'Total RAM (GB)', 'Type'],
-  ];
-  moduleData.services.forEach(s => {
-    servicesData.push([s.description, s.vcpu_per_pod, s.ram_per_pod, s.base_pods, s.scaled_pods, s.total_vcpu, s.total_ram, s.is_fixed ? 'Fixed' : 'Scalable']);
-  });
-  servicesData.push(['Total', '', '', '', moduleData.total_pods, moduleData.total_vcpu, moduleData.total_ram, '']);
-
-  const servicesSheet = XLSX.utils.aoa_to_sheet(servicesData);
-  servicesSheet['!cols'] = [{ wch: 35 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 10 }];
-  XLSX.utils.book_append_sheet(workbook, servicesSheet, `${moduleName} Services`);
+  // Freeze panes
+  ws.views = [{ state: 'frozen', ySplit: 4, xSplit: 0 }];
+  svcWs.views = [{ state: 'frozen', ySplit: 5, xSplit: 0 }];
 }
 
-export function exportToExcel(
+export async function exportToExcel(
   result: CombinedOutput,
   reportScope: ReportScope
-): void {
-  const workbook = XLSX.utils.book_new();
+): Promise<void> {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'MOSIP Resource Calculator';
+  workbook.created = new Date();
+  const version = result.mosip_version || '1.3.0';
 
   // Single module export
   if (reportScope === 'registration' || reportScope === 'authentication') {
-    addModuleSheet(workbook, result, reportScope);
-    const fileName = `MOSIP_${reportScope}_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(workbook, fileName);
+    addModuleSheetExcel(workbook, result, reportScope);
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(new Blob([buffer]), `MOSIP_${reportScope}_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
     return;
   }
 
-  // Consolidated / Complete export
+  // =========================================================================
+  // CONSOLIDATED / COMPLETE
+  // =========================================================================
 
   // Sheet 1: Overview
-  const overviewData: (string | number)[][] = [
-    ['MOSIP Server Sizing Report'],
-    [''],
-    ['Report Type', reportScope === 'complete' ? 'Complete Infrastructure Report' : 'Consolidated Summary'],
-    ['Generated', formatDate()],
-    ['MOSIP Version', result.mosip_version || '1.3.0'],
-    [''],
-    ['COMBINED INFRASTRUCTURE'],
-    ['Total vCPU', result.total_vcpu],
-    ['Total RAM (GB)', result.total_ram],
-    ['Total Pods', result.total_pods],
-    ['Registration Duration (Days)', result.registration_duration_days],
-  ];
+  const ws = workbook.addWorksheet('Overview');
+  ws.columns = [{ width: 32 }, { width: 18 }, { width: 16 }, { width: 16 }];
 
+  let row = addReportTitle(ws, reportScope === 'complete' ? 'Complete Infrastructure Report' : 'Consolidated Summary', '', version, 4);
+
+  // Combined Infrastructure
+  row = addSectionHeader(ws, row, 'COMBINED INFRASTRUCTURE', 4);
+  row = addKeyValuePairs(ws, row, [
+    { label: 'Total vCPU', value: result.total_vcpu, highlight: true },
+    { label: 'Total RAM (GB)', value: result.total_ram, highlight: true },
+    { label: 'Total Pods', value: result.total_pods, highlight: true },
+    { label: 'Registration Duration (Days)', value: result.registration_duration_days },
+  ]);
+
+  // Storage
   if (result.storage) {
-    overviewData.push(
-      [''],
-      ['STORAGE REQUIREMENTS'],
-      ['Postgres DB (GB)', Math.round(result.storage.postgres_total_gb * 10) / 10],
-      ['Logs - UINs Issued (GB)', Math.round(result.storage.logs_uins_issued_gb * 10) / 10],
-      ['Logs - Daily Auths (GB/day)', Math.round(result.storage.logs_daily_auths_gb * 10) / 10],
-      ['Total Storage (GB)', Math.round((result.storage.postgres_total_gb + result.storage.logs_uins_issued_gb + result.storage.logs_daily_auths_gb) * 10) / 10],
-    );
+    const totalStorage = result.storage.postgres_total_gb + result.storage.logs_uins_issued_gb + result.storage.logs_daily_auths_gb;
+    row = addSectionHeader(ws, row, 'STORAGE REQUIREMENTS', 4);
+    row = addKeyValuePairs(ws, row, [
+      { label: 'Postgres DB', value: `${(Math.round(result.storage.postgres_total_gb * 10) / 10)} GB` },
+      { label: 'Logs — UINs Issued (ES)', value: `${(Math.round(result.storage.logs_uins_issued_gb * 10) / 10)} GB` },
+      { label: 'Logs — Daily Auths (ES)', value: `${(Math.round(result.storage.logs_daily_auths_gb * 10) / 10)} GB/day` },
+      { label: 'Total Storage', value: `${(Math.round(totalStorage * 10) / 10)} GB`, highlight: true },
+    ]);
   }
 
-  overviewData.push(
-    [''],
-    ['HARDWARE RECOMMENDATION'],
-    ['Node Size', 'By vCPU', 'By RAM', 'Recommended'],
-    ['8 vCPU, 16 GB', Math.ceil(result.total_vcpu / 8), Math.ceil(result.total_ram / 16), Math.max(Math.ceil(result.total_vcpu / 8), Math.ceil(result.total_ram / 16))],
-    ['16 vCPU, 32 GB', Math.ceil(result.total_vcpu / 16), Math.ceil(result.total_ram / 32), Math.max(Math.ceil(result.total_vcpu / 16), Math.ceil(result.total_ram / 32))],
-    ['32 vCPU, 64 GB', Math.ceil(result.total_vcpu / 32), Math.ceil(result.total_ram / 64), Math.max(Math.ceil(result.total_vcpu / 32), Math.ceil(result.total_ram / 64))],
+  // Hardware Recommendation
+  const nodeConfigs = [
+    { name: '8 vCPU, 16 GB', vcpu: 8, ram: 16 },
+    { name: '16 vCPU, 32 GB', vcpu: 16, ram: 32 },
+    { name: '32 vCPU, 64 GB', vcpu: 32, ram: 64 },
+  ];
+
+  row = addSectionHeader(ws, row, 'HARDWARE RECOMMENDATION', 4);
+  row = addStyledTable(
+    ws, row,
+    ['Node Size', 'Nodes by vCPU', 'Nodes by RAM', 'Recommended'],
+    nodeConfigs.map(c => {
+      const byVcpu = Math.ceil(result.total_vcpu / c.vcpu);
+      const byRam = Math.ceil(result.total_ram / c.ram);
+      return [c.name, byVcpu, byRam, Math.max(byVcpu, byRam)];
+    }),
   );
 
-  const overviewSheet = XLSX.utils.aoa_to_sheet(overviewData);
-  overviewSheet['!cols'] = [{ wch: 28 }, { wch: 15 }, { wch: 12 }, { wch: 14 }];
-  XLSX.utils.book_append_sheet(workbook, overviewSheet, 'Overview');
+  // Note
+  const noteRow = ws.getRow(row);
+  ws.mergeCells(row, 1, row, 4);
+  noteRow.getCell(1).value = `Based on ${result.total_vcpu} total vCPU and ${result.total_ram} GB total RAM. Actual node count may vary by cloud provider and HA requirements.`;
+  noteRow.getCell(1).font = { italic: true, size: 9, color: EXCEL_GRAY, name: 'Calibri' };
+  row += 2;
+
+  ws.views = [{ state: 'frozen', ySplit: 4, xSplit: 0 }];
 
   // Sheet 2: Module Breakdown
-  const breakdownData: (string | number)[][] = [
-    ['MODULE-WISE BREAKDOWN'],
-    [''],
+  const mbWs = workbook.addWorksheet('Module Breakdown');
+  mbWs.columns = [{ width: 38 }, { width: 16 }, { width: 14 }, { width: 12 }, { width: 14 }, { width: 12 }];
+
+  let mbRow = addReportTitle(mbWs, 'Module-wise Resource Breakdown', '', version, 6);
+  mbRow = addStyledTable(
+    mbWs, mbRow,
     ['Module', 'Daily Load', 'Peak TPS', 'vCPU', 'RAM (GB)', 'Pods'],
-  ];
-  result.summary.forEach(row => {
-    breakdownData.push([row.module_name, row.avg_daily_load, row.peak_tps, row.total_vcpu, row.total_ram, row.total_pods]);
-  });
-  breakdownData.push(['Combined Total', '', '', result.total_vcpu, result.total_ram, result.total_pods]);
+    result.summary.map(r => [r.module_name, r.avg_daily_load, Number(r.peak_tps.toFixed(2)), r.total_vcpu, r.total_ram, r.total_pods]),
+    {
+      totalRow: ['Combined Total', '', '', result.total_vcpu, result.total_ram, result.total_pods],
+      numCols: [1, 3, 4, 5],
+    }
+  );
+  mbWs.views = [{ state: 'frozen', ySplit: 5, xSplit: 0 }];
 
-  const breakdownSheet = XLSX.utils.aoa_to_sheet(breakdownData);
-  breakdownSheet['!cols'] = [{ wch: 35 }, { wch: 15 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 10 }];
-  XLSX.utils.book_append_sheet(workbook, breakdownSheet, 'Module Breakdown');
-
-  // Add individual module sheets for complete report
+  // Individual module sheets for complete report
   if (reportScope === 'complete') {
-    addModuleSheet(workbook, result, 'registration');
-    addModuleSheet(workbook, result, 'authentication');
+    addModuleSheetExcel(workbook, result, 'registration');
+    addModuleSheetExcel(workbook, result, 'authentication');
   }
 
   // Projections sheet
   const hasProjections = result.projections && result.projections.length > 1 && result.annual_growth_rate > 0;
   if (hasProjections) {
-    const projData: (string | number)[][] = [
-      [`${result.projection_years} Year Combined Projection`],
-      [`Growth Rate: ${(result.annual_growth_rate * 100).toFixed(1)}%`],
-      [''],
-      ['Year', 'Population', 'Reg vCPU', 'Reg RAM', 'Reg Pods', 'Auth vCPU', 'Auth RAM', 'Auth Pods', 'Total vCPU', 'Total RAM', 'Total Pods', 'Postgres (GB)', 'Logs UINs (GB)', 'Logs Auth (GB)'],
+    const pWs = workbook.addWorksheet('Projections');
+    pWs.columns = [
+      { width: 8 }, { width: 16 }, { width: 10 }, { width: 12 }, { width: 12 },
+      { width: 12 }, { width: 12 }, { width: 12 }, { width: 14 }, { width: 14 },
+      { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 },
     ];
-    result.projections.forEach(p => {
-      projData.push([
-        p.year, p.population,
-        p.registration_vcpu, p.registration_ram, p.registration_pods,
-        p.authentication_vcpu, p.authentication_ram, p.authentication_pods,
-        p.total_vcpu, p.total_ram, p.total_pods,
-        Math.round(p.postgres_db_gb * 10) / 10,
-        Math.round(p.logs_uins_issued_gb * 10) / 10,
-        Math.round(p.logs_daily_auths_gb * 10) / 10,
-      ]);
-    });
 
-    const projSheet = XLSX.utils.aoa_to_sheet(projData);
-    projSheet['!cols'] = [
-      { wch: 6 }, { wch: 14 }, { wch: 10 }, { wch: 10 }, { wch: 10 },
-      { wch: 10 }, { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 },
-      { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 14 },
-    ];
-    XLSX.utils.book_append_sheet(workbook, projSheet, 'Projections');
+    let pRow = addReportTitle(pWs, `${result.projection_years} Year Combined Projection`, '', version, 14);
+
+    // Growth info row
+    const infoR = pWs.getRow(pRow);
+    pWs.mergeCells(pRow, 1, pRow, 14);
+    infoR.getCell(1).value = `Annual Growth Rate: ${(result.annual_growth_rate * 100).toFixed(1)}%  |  Base Population: ${formatNumber(result.projections[0]?.population || 0)}  |  Year ${result.projection_years}: ${formatNumber(result.projections[result.projections.length - 1]?.population || 0)}`;
+    infoR.getCell(1).font = { size: 10, color: EXCEL_GRAY, name: 'Calibri' };
+    pRow += 2;
+
+    pRow = addStyledTable(
+      pWs, pRow,
+      ['Year', 'Population', 'Reg Days', 'Reg vCPU', 'Reg RAM', 'Reg Pods', 'Auth vCPU', 'Auth RAM', 'Auth Pods', 'Total vCPU', 'Total RAM', 'Total Pods', 'Postgres (GB)', 'ES Logs (GB)'],
+      result.projections.map(p => [
+        p.year,
+        p.population,
+        p.registration_duration_days,
+        p.registration_vcpu,
+        p.registration_ram,
+        p.registration_pods,
+        p.authentication_vcpu,
+        p.authentication_ram,
+        p.authentication_pods,
+        p.total_vcpu,
+        p.total_ram,
+        p.total_pods,
+        Math.round(p.postgres_db_gb * 10) / 10,
+        Math.round((p.logs_uins_issued_gb + p.logs_daily_auths_gb) * 10) / 10,
+      ]),
+      { numCols: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] }
+    );
+
+    // Highlight total columns
+    for (let r = pRow - result.projections.length - 2; r < pRow - 1; r++) {
+      for (const c of [10, 11, 12]) {
+        const cell = pWs.getRow(r).getCell(c);
+        cell.font = { ...cell.font, bold: true, color: EXCEL_PRIMARY };
+      }
+    }
+
+    pWs.views = [{ state: 'frozen', ySplit: pRow - result.projections.length - 2, xSplit: 1 }];
   }
 
+  // Configuration sheet
+  const cfgWs = workbook.addWorksheet('Configuration');
+  cfgWs.columns = [{ width: 30 }, { width: 22 }];
+
+  let cfgRow = addReportTitle(cfgWs, 'Input Configuration', '', version, 2);
+
+  cfgRow = addSectionHeader(cfgWs, cfgRow, 'REGISTRATION PARAMETERS', 2);
+  cfgRow = addKeyValuePairs(cfgWs, cfgRow, [
+    { label: 'Total Population', value: result.registration.inputs.total_population },
+    { label: 'Registration Devices', value: result.registration.inputs.num_registration_devices },
+    { label: 'Registrations/Device/Day', value: result.registration.inputs.registrations_per_device_per_day },
+    { label: 'Upload Window (Hours)', value: result.registration.inputs.upload_window_hours },
+    { label: 'Peak Day Multiplier', value: result.registration.inputs.peak_day_multiplier },
+  ]);
+
+  cfgRow = addSectionHeader(cfgWs, cfgRow, 'AUTHENTICATION PARAMETERS', 2);
+  cfgRow = addKeyValuePairs(cfgWs, cfgRow, [
+    { label: 'Total Population', value: result.authentication.inputs.total_population },
+    { label: 'Daily Auth Rate', value: `${(result.authentication.inputs.avg_auth_percentage * 100).toFixed(1)}%` },
+    { label: 'Peak Hour Rate', value: `${(result.authentication.inputs.peak_hour_percentage * 100).toFixed(1)}%` },
+  ]);
+
+  cfgRow = addSectionHeader(cfgWs, cfgRow, 'BUFFER ALLOCATION', 2);
+  const regBuffers = result.registration.buffers;
+  cfgRow = addKeyValuePairs(cfgWs, cfgRow, [
+    { label: `Monitoring & Logging`, value: `${(regBuffers.monitoring_logging_pct * 100).toFixed(0)}%` },
+    { label: `Kubernetes Infrastructure`, value: `${(regBuffers.kubernetes_infra_pct * 100).toFixed(0)}%` },
+    { label: `System Buffer`, value: `${(regBuffers.system_buffer_pct * 100).toFixed(0)}%` },
+  ]);
+
+  if (hasProjections) {
+    cfgRow = addSectionHeader(cfgWs, cfgRow, 'PROJECTION SETTINGS', 2);
+    cfgRow = addKeyValuePairs(cfgWs, cfgRow, [
+      { label: 'Annual Growth Rate', value: `${(result.annual_growth_rate * 100).toFixed(1)}%` },
+      { label: 'Projection Years', value: result.projection_years },
+      { label: 'MOSIP Version', value: version },
+    ]);
+  }
+
+  // Notes sheet
+  const notesWs = workbook.addWorksheet('Notes');
+  notesWs.columns = [{ width: 80 }];
+  let nRow = 1;
+  notesWs.mergeCells(nRow, 1, nRow, 1);
+  notesWs.getCell(nRow, 1).value = 'Important Notes';
+  notesWs.getCell(nRow, 1).font = { bold: true, size: 14, color: EXCEL_PRIMARY, name: 'Calibri' };
+  nRow += 2;
+
+  const notes = [
+    'Calculations exclude Pre-Registration, KYC with OTP, and post-upload packet processing.',
+    `Buffer allocations: Monitoring & Logging (${(regBuffers.monitoring_logging_pct * 100).toFixed(0)}%), Kubernetes Infrastructure (${(regBuffers.kubernetes_infra_pct * 100).toFixed(0)}%), System Buffer (${(regBuffers.system_buffer_pct * 100).toFixed(0)}%).`,
+    'Peak TPS calculations assume external systems (ABIS) have maximum 300ms response times.',
+    `Based on MOSIP Platform ${version} performance benchmarks.`,
+    'Storage calculations based on IDA Resource Calculator: Postgres DB for identity & auth, Elasticsearch for logs.',
+    'This report is for planning purposes only. Actual requirements may vary based on deployment conditions.',
+    'Conduct load testing before production deployment.',
+  ];
+
+  notes.forEach((note, i) => {
+    const cell = notesWs.getCell(nRow + i, 1);
+    cell.value = `${i + 1}. ${note}`;
+    cell.font = { size: 10, color: EXCEL_DARK, name: 'Calibri' };
+    notesWs.getRow(nRow + i).height = 22;
+  });
+
+  // Save
+  const buffer = await workbook.xlsx.writeBuffer();
   const fileName = `MOSIP_${reportScope === 'complete' ? 'Complete' : 'Consolidated'}_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
-  XLSX.writeFile(workbook, fileName);
+  saveAs(new Blob([buffer]), fileName);
 }
