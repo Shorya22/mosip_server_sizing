@@ -1768,6 +1768,84 @@ body {
   flex: 1;
 }
 
+/* Report Scope Selection */
+.report-scope-section {
+  margin-bottom: 28px;
+}
+
+.report-scope-section h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--color-text);
+}
+
+.report-scope-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+  .report-scope-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.report-scope-option {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-card);
+  cursor: pointer;
+  transition: var(--transition);
+  text-align: left;
+  color: var(--color-text-muted);
+}
+
+.report-scope-option:hover {
+  border-color: var(--color-primary-light);
+  background: rgba(30, 64, 175, 0.02);
+}
+
+.report-scope-option.active {
+  border-color: var(--color-primary);
+  background: rgba(30, 64, 175, 0.06);
+  color: var(--color-primary);
+}
+
+.report-scope-text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.report-scope-label {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.report-scope-desc {
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--color-text-muted);
+}
+
+.report-scope-option.active .report-scope-label {
+  color: var(--color-primary);
+}
+
+.export-format-section h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: var(--color-text);
+}
+
 /* Export Options */
 .export-options h3 {
   font-size: 1.125rem;
@@ -1778,7 +1856,7 @@ body {
 
 .export-description {
   color: var(--color-text-muted);
-  margin-bottom: 24px;
+  margin-bottom: 12px;
 }
 
 .export-cards {
@@ -2274,6 +2352,35 @@ body {
   left: -16px;
   color: var(--color-accent);
   font-weight: bold;
+}
+
+/* Report Section Divider */
+.report-divider {
+  display: flex;
+  align-items: center;
+  margin: 32px 0 16px;
+  gap: 16px;
+}
+
+.report-divider::before,
+.report-divider::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-primary), transparent);
+}
+
+.report-divider::after {
+  background: linear-gradient(90deg, transparent, var(--color-primary));
+}
+
+.report-divider span {
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--color-primary);
+  white-space: nowrap;
 }
 
 /* Report Footer */

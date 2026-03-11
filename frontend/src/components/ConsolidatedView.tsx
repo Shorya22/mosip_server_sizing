@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Cpu, MemoryStick, Box, Calendar, HardDrive, Database, FileSearch, TrendingUp, ChevronLeft, ChevronRight, Server, Zap, BarChart3 } from 'lucide-react';
+import { Cpu, MemoryStick, Box, Calendar, HardDrive, Database, FileSearch, TrendingUp, ChevronLeft, ChevronRight, Server, Zap, BarChart3, FileBarChart, Layers } from 'lucide-react';
 import { ModuleDetails } from './ModuleDetails';
+import { ReportModal } from './ReportModal';
 import type { CombinedOutput } from '../types';
 
 interface ConsolidatedViewProps {
@@ -9,6 +10,7 @@ interface ConsolidatedViewProps {
 
 export function ConsolidatedView({ result }: ConsolidatedViewProps) {
   const [projectionPage, setProjectionPage] = useState(0);
+  const [showReportModal, setShowReportModal] = useState(false);
 
   useEffect(() => { setProjectionPage(0); }, [result]);
 
@@ -24,6 +26,37 @@ export function ConsolidatedView({ result }: ConsolidatedViewProps) {
 
   return (
     <div className="consolidated-view">
+      {/* Results Header */}
+      <div className="results-header">
+        <div className="results-title-section">
+          <h2>Consolidated Summary</h2>
+          {result.mosip_version && (
+            <span className="version-badge">
+              <Layers size={14} />
+              MOSIP {result.mosip_version}
+            </span>
+          )}
+        </div>
+        <div className="results-actions">
+          <button className="btn btn-primary" onClick={() => setShowReportModal(true)}>
+            <FileBarChart size={16} />
+            Generate Report
+          </button>
+        </div>
+      </div>
+
+      {/* Growth Info Banner */}
+      {hasProjections && (
+        <div className="projection-info-banner">
+          <TrendingUp size={18} />
+          <span>
+            Annual Growth Rate: <strong>{(result.annual_growth_rate * 100).toFixed(1)}%</strong>
+            {' '}• Base Population: <strong>{formatNumber(result.projections[0]?.population || 0)}</strong>
+            {' '}• Year {result.projection_years} Population: <strong>{formatNumber(result.projections[result.projections.length - 1]?.population || 0)}</strong>
+          </span>
+        </div>
+      )}
+
       {/* Total Infrastructure Overview */}
       <div className="consolidated-header">
         <h3 className="section-title">
@@ -309,6 +342,14 @@ export function ConsolidatedView({ result }: ConsolidatedViewProps) {
           data={result.authentication}
         />
       </div>
+
+      {/* Report Modal */}
+      <ReportModal
+        isOpen={showReportModal}
+        onClose={() => setShowReportModal(false)}
+        result={result}
+        moduleType="consolidated"
+      />
     </div>
   );
 }
