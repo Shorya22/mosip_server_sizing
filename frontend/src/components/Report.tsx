@@ -14,7 +14,7 @@ import type { CombinedOutput, ServiceResource } from '../types';
 
 interface ReportProps {
   result: CombinedOutput;
-  moduleType: 'registration' | 'authentication';
+  moduleType: 'consolidated' | 'registration' | 'authentication';
 }
 
 const CHART_COLORS = {

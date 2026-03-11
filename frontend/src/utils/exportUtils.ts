@@ -24,7 +24,7 @@ const BORDER = [226, 232, 240] as [number, number, number];   // Border color
 
 export function exportToPDF(
   result: CombinedOutput,
-  moduleType: 'registration' | 'authentication'
+  moduleType: 'consolidated' | 'registration' | 'authentication'
 ): void {
   const isRegistration = moduleType === 'registration';
   const moduleData = isRegistration ? result.registration : result.authentication;
@@ -416,7 +416,7 @@ export function exportToPDF(
 
 export function exportToExcel(
   result: CombinedOutput,
-  moduleType: 'registration' | 'authentication'
+  moduleType: 'consolidated' | 'registration' | 'authentication'
 ): void {
   const isRegistration = moduleType === 'registration';
   const moduleData = isRegistration ? result.registration : result.authentication;

@@ -1312,6 +1312,251 @@ body {
   background: rgba(245, 158, 11, 0.05);
 }
 
+/* =============================================================================
+   Consolidated View
+   ============================================================================= */
+
+.consolidated-view {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.consolidated-header {
+  margin-bottom: -8px;
+}
+
+/* Total Infrastructure Cards */
+.consolidated-totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.consolidated-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  border-radius: var(--radius-lg);
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  transition: var(--transition);
+}
+
+.consolidated-card:hover {
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
+}
+
+.consolidated-card.primary {
+  border-left: 4px solid var(--color-primary);
+}
+
+.consolidated-card.storage {
+  border-left: 4px solid var(--color-secondary);
+}
+
+.consolidated-card.duration {
+  border-left: 4px solid var(--color-accent);
+}
+
+.consolidated-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 52px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+}
+
+.consolidated-card.primary .consolidated-card-icon {
+  background: rgba(30, 64, 175, 0.1);
+  color: var(--color-primary);
+}
+
+.consolidated-card.storage .consolidated-card-icon {
+  background: rgba(5, 150, 105, 0.1);
+  color: var(--color-secondary);
+}
+
+.consolidated-card.duration .consolidated-card-icon {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--color-accent);
+}
+
+.consolidated-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.consolidated-card-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.2;
+}
+
+.consolidated-card-label {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Module-wise Breakdown Table */
+.consolidated-breakdown {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+.consolidated-table-container {
+  margin-top: 16px;
+  overflow-x: auto;
+}
+
+.consolidated-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.consolidated-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.consolidated-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.consolidated-table .module-name-cell {
+  font-weight: 500;
+}
+
+.consolidated-table tfoot .total-row td {
+  background: rgba(30, 64, 175, 0.04);
+  border-top: 2px solid var(--color-primary);
+  border-bottom: none;
+  color: var(--color-primary);
+  font-size: 0.9rem;
+}
+
+/* Storage in consolidated */
+.consolidated-storage {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+/* Projections in consolidated */
+.consolidated-projections {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+.consolidated-projections .projection-table .highlight-cell {
+  background: rgba(30, 64, 175, 0.04);
+  font-weight: 600;
+}
+
+/* Hardware Recommendation */
+.consolidated-recommendation {
+  background: var(--color-bg-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+}
+
+.recommendation-table-container {
+  margin-top: 16px;
+}
+
+.recommendation-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.recommendation-table th {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.recommendation-table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.recommendation-table .node-size-cell {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.recommendation-table .recommended-cell {
+  color: var(--color-primary);
+  font-size: 1rem;
+}
+
+.recommendation-note {
+  margin-top: 12px;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* Module Details in consolidated */
+.consolidated-modules {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 768px) {
+  .consolidated-totals {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .consolidated-card {
+    padding: 16px;
+  }
+
+  .consolidated-card-value {
+    font-size: 1.2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .consolidated-totals {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Notes Section */
 .notes-section {
   background: rgba(245, 158, 11, 0.05);

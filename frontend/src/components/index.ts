@@ -2,6 +2,7 @@ export { Header } from './Header';
 export { TabNavigation } from './TabNavigation';
 export { InputForm } from './InputForm';
 export { ResultsPanel } from './ResultsPanel';
+export { ConsolidatedView } from './ConsolidatedView';
 export { SummaryCard } from './SummaryCard';
 export { ModuleDetails } from './ModuleDetails';
 export { Report } from './Report';

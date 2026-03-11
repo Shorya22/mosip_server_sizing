@@ -1,4 +1,4 @@
-import { Upload, Shield } from 'lucide-react';
+import { Upload, Shield, BarChart3 } from 'lucide-react';
 import type { CalculatorMode, ModuleSelection, TabConfig } from '../types';
 
 interface TabNavigationProps {
@@ -8,6 +8,11 @@ interface TabNavigationProps {
 }
 
 const TABS: TabConfig[] = [
+  {
+    id: 'consolidated',
+    label: 'Consolidated',
+    description: 'Combined infrastructure summary',
+  },
   {
     id: 'registration',
     label: 'Registration',
@@ -21,12 +26,18 @@ const TABS: TabConfig[] = [
 ];
 
 const TAB_ICONS: Record<string, typeof Upload> = {
+  consolidated: BarChart3,
   registration: Upload,
   authentication: Shield,
 };
 
 export function TabNavigation({ activeTab, onTabChange, availableModules }: TabNavigationProps) {
-  const visibleTabs = TABS.filter(tab => availableModules[tab.id]);
+  const visibleTabs = TABS.filter(tab => {
+    if (tab.id === 'consolidated') {
+      return availableModules.registration && availableModules.authentication;
+    }
+    return availableModules[tab.id as keyof ModuleSelection];
+  });
 
   if (visibleTabs.length <= 1) return null;
 

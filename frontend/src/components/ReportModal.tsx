@@ -8,7 +8,7 @@ interface ReportModalProps {
   isOpen: boolean;
   onClose: () => void;
   result: CombinedOutput;
-  moduleType: 'registration' | 'authentication';
+  moduleType: 'consolidated' | 'registration' | 'authentication';
 }
 
 export function ReportModal({ isOpen, onClose, result, moduleType }: ReportModalProps) {
@@ -18,7 +18,9 @@ export function ReportModal({ isOpen, onClose, result, moduleType }: ReportModal
 
   if (!isOpen) return null;
 
-  const moduleName = moduleType === 'registration'
+  const moduleName = moduleType === 'consolidated'
+    ? 'Consolidated Summary'
+    : moduleType === 'registration'
     ? 'Registration Upload & SyncData'
     : 'ID Authentication';
 

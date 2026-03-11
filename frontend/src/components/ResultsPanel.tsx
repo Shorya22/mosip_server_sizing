@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { SummaryCard } from './SummaryCard';
 import { ModuleDetails } from './ModuleDetails';
+import { ConsolidatedView } from './ConsolidatedView';
 import { ReportModal } from './ReportModal';
 import { FileText, FileBarChart, Layers, TrendingUp, Database, HardDrive, FileSearch, ChevronDown, ChevronUp, Table2, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { CombinedOutput, CalculatorMode } from '../types';
@@ -28,6 +29,11 @@ export function ResultsPanel({ result, moduleType }: ResultsPanelProps) {
         </div>
       </div>
     );
+  }
+
+  // Consolidated view - separate component
+  if (moduleType === 'consolidated') {
+    return <ConsolidatedView result={result} />;
   }
 
   const isRegistration = moduleType === 'registration';

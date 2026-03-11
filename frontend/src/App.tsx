@@ -23,8 +23,12 @@ function App() {
     try {
       const calculationResult = await calculatorApi.calculateCombined(input);
       setResult(calculationResult);
-      // Set initial results tab to first selected module
-      setResultsTab(selectedModules.registration ? 'registration' : 'authentication');
+      // Default to consolidated if both modules selected, otherwise the single module
+      if (selectedModules.registration && selectedModules.authentication) {
+        setResultsTab('consolidated');
+      } else {
+        setResultsTab(selectedModules.registration ? 'registration' : 'authentication');
+      }
       setPage('results');
     } catch (err) {
       console.error('Calculation error:', err);

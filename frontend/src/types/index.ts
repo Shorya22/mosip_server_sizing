@@ -176,7 +176,7 @@ export interface VersionListResponse {
 // UI TYPES
 // =============================================================================
 
-export type CalculatorMode = 'registration' | 'authentication';
+export type CalculatorMode = 'consolidated' | 'registration' | 'authentication';
 
 export type AppPage = 'configure' | 'results';
 
