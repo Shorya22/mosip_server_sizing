@@ -1,11 +1,18 @@
 import { useState } from 'react';
 import { Header, TabNavigation, InputForm, ResultsPanel } from './components';
+import { LoginPage } from './components/LoginPage';
 import { calculatorApi } from './api/calculator';
 import { ArrowLeft } from 'lucide-react';
 import type { AppPage, CalculatorMode, ModuleSelection, CombinedInput, CombinedOutput } from './types';
 import './App.css';
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return sessionStorage.getItem('mosip_auth') === 'true';
+  });
+  const [username, setUsername] = useState(() => {
+    return sessionStorage.getItem('mosip_user') || '';
+  });
   const [page, setPage] = useState<AppPage>('configure');
   const [selectedModules, setSelectedModules] = useState<ModuleSelection>({
     registration: true,
@@ -47,9 +54,27 @@ function App() {
     setError(null);
   };
 
+  const handleLogin = (user: string) => {
+    setIsAuthenticated(true);
+    setUsername(user);
+    sessionStorage.setItem('mosip_auth', 'true');
+    sessionStorage.setItem('mosip_user', user);
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setUsername('');
+    sessionStorage.removeItem('mosip_auth');
+    sessionStorage.removeItem('mosip_user');
+  };
+
+  if (!isAuthenticated) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
   return (
     <div className="app">
-      <Header />
+      <Header username={username} onLogout={handleLogout} />
 
       {/* Configuration Page - always mounted, hidden when on results */}
       <main className="main-content" style={{ display: page === 'configure' ? 'block' : 'none' }}>

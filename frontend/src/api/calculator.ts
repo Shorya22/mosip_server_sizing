@@ -19,6 +19,12 @@ const api = axios.create({
 });
 
 export const calculatorApi = {
+  // Login
+  async login(username: string, password: string): Promise<{ success: boolean; username: string }> {
+    const response = await api.post('/auth/login', { username, password });
+    return response.data;
+  },
+
   // Health check
   async healthCheck() {
     const response = await api.get('/health');

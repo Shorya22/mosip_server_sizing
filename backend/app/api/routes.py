@@ -9,6 +9,7 @@ Supports multiple MOSIP versions.
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from app.core.config import settings
 from app.core.versions import (
@@ -33,6 +34,23 @@ from app.services.calculator import get_calculator
 
 
 router = APIRouter()
+
+
+# =============================================================================
+# AUTH ENDPOINTS
+# =============================================================================
+
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+@router.post("/auth/login", tags=["Auth"], summary="Login with credentials")
+async def login(request: LoginRequest):
+    """Validate login credentials."""
+    if request.username == settings.ADMIN_USERNAME and request.password == settings.ADMIN_PASSWORD:
+        return {"success": True, "username": request.username}
+    raise HTTPException(status_code=401, detail="Invalid username or password")
 
 
 # =============================================================================
