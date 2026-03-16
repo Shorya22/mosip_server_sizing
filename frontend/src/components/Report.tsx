@@ -9,8 +9,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { Server, Cpu, MemoryStick, Box, Calendar, Activity, Zap, HardDrive, Database, FileSearch, TrendingUp } from 'lucide-react';
-import type { CombinedOutput, RegistrationOutput, AuthenticationOutput, ServiceResource } from '../types';
+import { Server, Cpu, MemoryStick, Box, Calendar, Activity, Zap, HardDrive, Database, TrendingUp } from 'lucide-react';
+import type { CombinedOutput, ServiceResource } from '../types';
 
 type ReportScope = 'complete' | 'consolidated' | 'registration' | 'authentication';
 

@@ -354,7 +354,7 @@ export function ConsolidatedView({ result }: ConsolidatedViewProps) {
   );
 }
 
-function HardwareRecommendation({ label, vcpu, ram }: { label: string; vcpu: number; ram: number }) {
+function HardwareRecommendation({ vcpu, ram }: { label: string; vcpu: number; ram: number }) {
   // Common node sizes
   const nodeConfigs = [
     { name: '8 vCPU, 16 GB', vcpu: 8, ram: 16 },

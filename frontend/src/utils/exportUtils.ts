@@ -506,15 +506,13 @@ export function exportToPDF(
 // Style constants
 const EXCEL_PRIMARY = { argb: 'FF1E40AF' };
 const EXCEL_PRIMARY_LIGHT = { argb: 'FFEEF2FF' };
-const EXCEL_SUCCESS = { argb: 'FF059669' };
-const EXCEL_SUCCESS_LIGHT = { argb: 'FFECFDF5' };
+
 const EXCEL_DARK = { argb: 'FF1E293B' };
 const EXCEL_GRAY = { argb: 'FF64748B' };
 const EXCEL_LIGHT_BG = { argb: 'FFF8FAFC' };
 const EXCEL_WHITE = { argb: 'FFFFFFFF' };
 const EXCEL_BORDER_COLOR = { argb: 'FFE2E8F0' };
-const EXCEL_ACCENT = { argb: 'FFF59E0B' };
-const EXCEL_PURPLE = { argb: 'FF8B5CF6' };
+
 
 type ExcelFill = ExcelJS.FillPattern;
 type ExcelBorder = Partial<ExcelJS.Borders>;
@@ -523,7 +521,7 @@ const headerFill: ExcelFill = { type: 'pattern', pattern: 'solid', fgColor: EXCE
 const sectionFill: ExcelFill = { type: 'pattern', pattern: 'solid', fgColor: EXCEL_LIGHT_BG };
 const altRowFill: ExcelFill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFCFCFE' } };
 const totalRowFill: ExcelFill = { type: 'pattern', pattern: 'solid', fgColor: EXCEL_PRIMARY_LIGHT };
-const successFill: ExcelFill = { type: 'pattern', pattern: 'solid', fgColor: EXCEL_SUCCESS_LIGHT };
+
 
 const thinBorder: ExcelBorder = {
   top: { style: 'thin', color: EXCEL_BORDER_COLOR },
@@ -546,8 +544,6 @@ function addStyledTable(
   rows: (string | number)[][],
   options?: { totalRow?: (string | number)[]; numCols?: number[] }
 ): number {
-  const colCount = headers.length;
-
   // Header row
   const headerRow = ws.getRow(startRow);
   headers.forEach((h, i) => {
@@ -638,7 +634,7 @@ function addKeyValuePairs(
   return startRow + pairs.length + 1;
 }
 
-function addReportTitle(ws: ExcelJS.Worksheet, title: string, subtitle: string, version: string, colSpan: number): number {
+function addReportTitle(ws: ExcelJS.Worksheet, title: string, _subtitle: string, version: string, colSpan: number): number {
   // Title row
   ws.mergeCells(1, 1, 1, colSpan);
   const titleCell = ws.getCell(1, 1);

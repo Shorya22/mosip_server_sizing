@@ -51,7 +51,7 @@ const toInputStrings = (values: CombinedInput): InputStrings => ({
 });
 
 export function InputForm({ selectedModules, onModuleChange, onCalculate, isLoading }: InputFormProps) {
-  const [values, setValues] = useState<CombinedInput>(DEFAULT_VALUES);
+  const [_values, setValues] = useState<CombinedInput>(DEFAULT_VALUES);
   const [inputStrings, setInputStrings] = useState<InputStrings>(toInputStrings(DEFAULT_VALUES));
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showBufferSettings, setShowBufferSettings] = useState(false);
