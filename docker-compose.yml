@@ -3,6 +3,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+    image: mosip-resource-calculator-backend:16-03-2026
     container_name: mosip-backend
     restart: unless-stopped
     ports:
@@ -17,6 +18,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    image: mosip-resource-calculator-frontend:16-03-2026
     container_name: mosip-frontend
     restart: unless-stopped
     ports:
